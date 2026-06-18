@@ -1,0 +1,8 @@
+torch
+langchain
+sentence-transformers
+faiss-cpu
+ddgs
+huggingface_hub
+python-dotenv
+
