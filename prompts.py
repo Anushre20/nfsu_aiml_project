@@ -12,8 +12,7 @@ Observation : result returned by the tool
 
 Available tools : 
 1. web_search
-2. python_executer
-3. FINISH
+2. FINISH
 
 When you need more information :
 Thought : I need more information.
