@@ -3,21 +3,21 @@ import re
 def parse_output(text):
     try:
         thought_match = re.search(
-            r"Thought:\s*(.*?)(?=Action:)",
+            r"Thought\s*:\s*(.*?)(?=Action\s*:)",
             text,
-            re.DOTALL
+            re.DOTALL | re.IGNORECASE
         )
 
         action_match = re.search(
-            r"Action:\s*(.*?)(?=Action Input:)",
+            r"Action\s*:\s*(.*?)(?=Action Input\s*:)",
             text,
-            re.DOTALL
+            re.DOTALL | re.IGNORECASE
         )
 
         action_input_match = re.search(
-            r"Action Input:\s*(.*?)(?=Observation:|$)",
+            r"Action Input\s*:\s*(.*)",
             text,
-            re.DOTALL
+            re.DOTALL | re.IGNORECASE
         )
 
         return{
