@@ -1,13 +1,14 @@
 from llm import call_llm
 from parser import parse_output
 from prompts import SYSTEM_PROMPT
+from prompts import build_system_prompt
 from tools import TOOLS
 from memory import Memory
 
 MAX_STEPS = 8
 memory = Memory()
 
-def run_agent(question):
+def run_agent(question, subtasks=None):
     memory.add_short_term(
         "user",
         question
@@ -33,20 +34,22 @@ def run_agent(question):
             long_memory
         )
 
+        system_prompt = build_system_prompt(subtasks)
+
         prompt = f"""
-        {SYSTEM_PROMPT}
+                {system_prompt}
 
-        Relevant Past Knowledge:
-        {long_context}
+                Relevant Past Knowledge:
+                {long_context}
 
-        Recent Conversation:
-        {short_context}
+                Recent Conversation:
+                {short_context}
 
-        Question:
-        {question}
+                Question:
+                {question}
 
-        {scratchpad}
-        """
+                {scratchpad}
+                """
 
         llm_output = call_llm(prompt)
         print("\n===================== LLM Output ====================")

@@ -2,7 +2,7 @@ BASE_SYSTEM_PROMPT = """
 You are a ReAct Agent.
 You must follow this format exactly :
 
-Subtasks : numbered subtask list, or None if no subtask plan is provided
+Subtasks : repeat the exact provided subtask plan
 
 Thought : reason about the problem
 
@@ -17,14 +17,14 @@ Available tools :
 2. FINISH
 
 When you need more information :
-Subtasks : numbered subtask list, or None
+Subtasks : use the provided subtask plan
 Thought : I need more information.
 Action : web_search
 Action Input : search query
 
 When you have enough information :
 
-Subtasks : numbered subtask list, or None
+Subtasks : use the provided subtask plan
 Thought : I have enough information.
 Action : FINISH
 Action Input : Final answer to the user.

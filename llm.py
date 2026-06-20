@@ -37,10 +37,3 @@ def call_llm(prompt : str) -> str:
     except Exception as e:
         return f"Error occurred: {e}"
         
-
-
-
-
-
-
-

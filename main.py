@@ -1,4 +1,10 @@
 from agent import run_agent
+from task_planner import TaskPlanner
+
+class PlannerLLM:
+    def __call__(self, prompt):
+        from llm import call_llm
+        return call_llm(prompt)
 
 def main():
 
@@ -9,7 +15,21 @@ def main():
         if query.lower() == "exit":
             break
 
-        answer = run_agent(query)
+        planner = TaskPlanner(
+            agent=None,
+            llm=PlannerLLM()
+        )
+
+        subtasks = planner.decompose_task(query)
+
+        print("\nGenerated Subtasks:")
+        for i, task in enumerate(subtasks, start=1):
+            print(f"{i}. {task}")
+
+        answer = run_agent(
+            query,
+            subtasks=subtasks
+        )
 
         print("\nFINAL ANSWER")
         print(answer)
