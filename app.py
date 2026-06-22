@@ -22,22 +22,22 @@ for msg in st.session_state.messages:
 
         if msg["role"] == "assistant" and "steps" in msg:
 
-            with st.expander("🧠 View Agent Reasoning"):
+            with st.expander("View Agent Reasoning"):
 
                 for i, step in enumerate(msg["steps"], start=1):
 
                     st.markdown(f"### Step {i}")
 
-                    st.markdown("#### 💭 Thought")
+                    st.markdown("#### Thought")
                     st.write(step["thought"])
 
-                    st.markdown("#### ⚙️ Action")
+                    st.markdown("#### Action")
                     st.code(step["action"])
 
-                    st.markdown("#### 📥 Action Input")
+                    st.markdown("#### Action Input")
                     st.code(step["action_input"])
 
-                    st.markdown("#### 👀 Observation")
+                    st.markdown("#### Observation")
                     st.code(step["observation"])
 
                     st.divider()
@@ -62,7 +62,7 @@ if prompt:
     with st.chat_message("assistant"):
 
         thinking = st.empty()
-        thinking.info("🤔 Agent is thinking...")
+        thinking.info("Agent is thinking...")
 
         result = run_agent(prompt)
 
@@ -76,22 +76,22 @@ if prompt:
 
             st.markdown(answer)
 
-            with st.expander("🧠 View Agent Reasoning"):
+            with st.expander("View Agent Reasoning"):
 
                 for i, step in enumerate(steps, start=1):
 
                     st.markdown(f"### Step {i}")
 
-                    st.markdown("#### 💭 Thought")
+                    st.markdown("#### Thought")
                     st.write(step["thought"])
 
-                    st.markdown("#### ⚙️ Action")
+                    st.markdown("#### Action")
                     st.code(step["action"])
 
-                    st.markdown("#### 📥 Action Input")
+                    st.markdown("#### Action Input")
                     st.code(step["action_input"])
 
-                    st.markdown("#### 👀 Observation")
+                    st.markdown("#### Observation")
                     st.code(step["observation"])
 
                     st.divider()
