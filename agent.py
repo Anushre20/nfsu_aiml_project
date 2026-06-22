@@ -9,6 +9,7 @@ MAX_STEPS = 8
 memory = Memory()
 
 def run_agent(question, subtasks=None):
+    steps_data = []
     memory.add_short_term(
         "user",
         question
@@ -80,7 +81,17 @@ Answer:
                 summary
             )
 
-            return answer
+            steps_data.append({
+            "thought": parsed["thought"],
+            "action": action,
+            "action_input": parsed["action_input"],
+            "observation": "Final Answer Generated"
+        })
+
+            return {
+                "steps": steps_data,
+                "final_answer": answer
+        }
         
         if action not in TOOLS:
             return f"Unknown tool : {action}"
@@ -89,6 +100,13 @@ Answer:
             parsed["action_input"]
         )
         print("TOOL RESULT=", tool_result)
+
+        steps_data.append({
+            "thought": parsed["thought"],
+            "action": action,
+            "action_input": parsed["action_input"],
+            "observation": str(tool_result)
+        })
 
         scratchpad += f"""
         Thought: {parsed['thought']}

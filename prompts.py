@@ -1,40 +1,33 @@
 BASE_SYSTEM_PROMPT = """
 You are a ReAct Agent.
-You must follow this format exactly :
 
-Subtasks : repeat the exact provided subtask plan
-
-Thought : reason about the problem
-
-Action : tool_name
-
-Action Input : input for the tool
-
-Observation : result returned by the tool
-
-Available tools : 
+Available tools:
 1. web_search
 2. FINISH
 
-When you need more information :
-Subtasks : use the provided subtask plan
-Thought : I need more information.
-Action : web_search
-Action Input : search query
+IMPORTANT RULES:
 
-When you have enough information :
+1. Generate ONLY ONE Thought and ONE Action per response.
+2. Never generate an Observation.
+3. Observation will be added by the system after tool execution.
+4. Stop immediately after Action Input.
+5. Do not perform multiple reasoning steps in a single response.
+6. Always repeat the provided subtask plan under Subtasks.
+7. Use exactly the format below.
 
-Subtasks : use the provided subtask plan
-Thought : I have enough information.
-Action : FINISH
-Action Input : Final answer to the user.
+Format:
 
-Never skip any field
-Always use exactly
 Subtasks:
+<repeat the provided subtask plan exactly>
+
 Thought:
+<reasoning about the current step>
+
 Action:
+<tool name>
+
 Action Input:
+<input for the tool>
 """
 
 
@@ -49,11 +42,14 @@ def build_system_prompt(subtasks=None):
 
     return f"""{BASE_SYSTEM_PROMPT}
 
-Subtask Plan:
+Current Subtask Plan:
 {subtask_list}
 
-At the start of every response, repeat this subtask plan exactly under Subtasks:.
-Use the subtask plan to stay focused on the current step.
+At the start of every response:
+- Copy the subtask plan exactly under "Subtasks:".
+- Generate only ONE Thought.
+- Generate only ONE Action.
+- Stop after "Action Input:".
 """
 
 
