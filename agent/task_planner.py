@@ -28,6 +28,9 @@ User Request:
         return tasks if tasks else [query]
 
     def execute_plan(self, query: str) -> str:
+        if self.agent is None:
+            raise ValueError("agent is not set — cannot execute plan")
+
         subtasks = self.decompose_task(query)
         completed: list[tuple[str, str]] = []
         running_context = ""
@@ -43,7 +46,8 @@ Current Task:
 {subtask}
 """
 
-            result = self.agent.run(agent_prompt)
+            agent_result = self.agent.run(agent_prompt)
+            result = agent_result if isinstance(agent_result, str) else agent_result.get("final_answer", str(agent_result))
 
             if self._task_failed(result) and self.enable_replanning:
                 remaining = self.replan_after_failure(
@@ -95,7 +99,6 @@ Output numbered tasks only."""
         return self._parse_numbered_list(self._call_llm(prompt))
 
     def _call_llm(self, prompt: str) -> str:
-        """Support function-based and object-based LLM wrappers."""
         if callable(self.llm):
             return str(self.llm(prompt))
         if hasattr(self.llm, "call"):

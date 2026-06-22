@@ -1,15 +1,15 @@
-from agent import run_agent
-from task_planner import TaskPlanner
+from agent.core import run_agent
+from agent.task_planner import TaskPlanner
+
 
 class PlannerLLM:
     def __call__(self, prompt):
-        from llm import call_llm
+        from agent.llm import call_llm
         return call_llm(prompt)
 
+
 def main():
-
     while True:
-
         query = input("\nAsk Question: ")
 
         if query.lower() == "exit":
@@ -26,13 +26,19 @@ def main():
         for i, task in enumerate(subtasks, start=1):
             print(f"{i}. {task}")
 
-        answer = run_agent(
+        result = run_agent(
             query,
             subtasks=subtasks
         )
 
+        if isinstance(result, dict):
+            answer = result["final_answer"]
+        else:
+            answer = result
+
         print("\nFINAL ANSWER")
         print(answer)
+
 
 if __name__ == "__main__":
     main()

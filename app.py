@@ -1,116 +1,81 @@
-import streamlit as st
-from agent import run_agent
+import json
+import os
+import sys
 
-st.set_page_config(
-    page_title="ReAct Agent",
-    page_icon="🤖",
-    layout="wide"
-)
+from flask import Flask, render_template, request, Response, jsonify
 
-st.title("🤖 ReAct AI Agent")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# Initialize chat history
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+from agent.core import stream_agent, run_agent
+from agent.task_planner import TaskPlanner
+from agent.llm import call_llm
+from agent.tools import get_workspace, set_workspace
 
-# Display previous messages
-for msg in st.session_state.messages:
 
-    with st.chat_message(msg["role"]):
+class PlannerLLM:
+    def __call__(self, prompt):
+        return call_llm(prompt)
 
-        st.markdown(msg["content"])
 
-        if msg["role"] == "assistant" and "steps" in msg:
+planner = TaskPlanner(agent=None, llm=PlannerLLM())
 
-            with st.expander("View Agent Reasoning"):
+app = Flask(__name__)
 
-                for i, step in enumerate(msg["steps"], start=1):
 
-                    st.markdown(f"### Step {i}")
+@app.route("/")
+def index():
+    return render_template("index.html", workspace=get_workspace())
 
-                    st.markdown("#### Thought")
-                    st.write(step["thought"])
 
-                    st.markdown("#### Action")
-                    st.code(step["action"])
+@app.route("/api/workspace", methods=["GET"])
+def api_get_workspace():
+    return jsonify({"path": get_workspace()})
 
-                    st.markdown("#### Action Input")
-                    st.code(step["action_input"])
 
-                    st.markdown("#### Observation")
-                    st.code(step["observation"])
+@app.route("/api/workspace", methods=["POST"])
+def api_set_workspace():
+    data = request.get_json()
+    new_path = data.get("path", "").strip()
+    if not new_path:
+        return jsonify({"error": "Path is required"}), 400
+    result = set_workspace(new_path)
+    if result.startswith("Error"):
+        return jsonify({"error": result}), 400
+    return jsonify({"path": result})
 
-                    st.divider()
 
-# Chat input
-prompt = st.chat_input("Ask something...")
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    data = request.get_json()
+    prompt = data.get("prompt", "").strip()
+    if not prompt:
+        return Response(
+            json.dumps({"error": "Prompt is required"}), status=400, content_type="application/json"
+        )
 
-if prompt:
+    ws_path = get_workspace()
+    if not os.path.exists(ws_path):
+        return Response(
+            json.dumps({"error": "Workspace path does not exist. Set a valid directory first."}),
+            status=400, content_type="application/json",
+        )
 
-    # Store and display user message
-    st.session_state.messages.append(
-        {
-            "role": "user",
-            "content": prompt
-        }
-    )
+    def generate():
+        subtasks = None
+        try:
+            subtasks = planner.decompose_task(prompt)
+            yield f"data: {json.dumps({'type': 'subtasks', 'subtasks': subtasks})}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'subtasks', 'subtasks': [], 'error': str(e)})}\n\n"
 
-    with st.chat_message("user"):
-        st.markdown(prompt)
+        for event in stream_agent(prompt, subtasks=subtasks):
+            yield f"data: {json.dumps(event)}\n\n"
 
-    # Generate assistant response
-    with st.chat_message("assistant"):
+    return Response(generate(), mimetype="text/event-stream", headers={
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+    })
 
-        thinking = st.empty()
-        thinking.info("Agent is thinking...")
 
-        result = run_agent(prompt)
-
-        thinking.empty()
-
-        # Handle both dict and string returns
-        if isinstance(result, dict):
-
-            answer = result["final_answer"]
-            steps = result["steps"]
-
-            st.markdown(answer)
-
-            with st.expander("View Agent Reasoning"):
-
-                for i, step in enumerate(steps, start=1):
-
-                    st.markdown(f"### Step {i}")
-
-                    st.markdown("#### Thought")
-                    st.write(step["thought"])
-
-                    st.markdown("#### Action")
-                    st.code(step["action"])
-
-                    st.markdown("#### Action Input")
-                    st.code(step["action_input"])
-
-                    st.markdown("#### Observation")
-                    st.code(step["observation"])
-
-                    st.divider()
-
-            st.session_state.messages.append(
-                {
-                    "role": "assistant",
-                    "content": answer,
-                    "steps": steps
-                }
-            )
-
-        else:
-            # Fallback if run_agent still returns only a string
-            st.markdown(result)
-
-            st.session_state.messages.append(
-                {
-                    "role": "assistant",
-                    "content": result
-                }
-            )
+if __name__ == "__main__":
+    app.run(debug=True, threaded=True, port=5000)
