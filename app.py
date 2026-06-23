@@ -48,7 +48,9 @@ def api_set_workspace():
 def chat():
     data = request.get_json()
     prompt = data.get("prompt", "").strip()
-    if not prompt:
+    resume_from = data.get("resume_from")
+
+    if not resume_from and not prompt:
         return Response(
             json.dumps({"error": "Prompt is required"}), status=400, content_type="application/json"
         )
@@ -61,15 +63,21 @@ def chat():
         )
 
     def generate():
-        subtasks = None
-        try:
-            subtasks = planner.decompose_task(prompt)
-            yield f"data: {json.dumps({'type': 'subtasks', 'subtasks': subtasks})}\n\n"
-        except Exception as e:
-            yield f"data: {json.dumps({'type': 'subtasks', 'subtasks': [], 'error': str(e)})}\n\n"
+        if resume_from:
+            subtasks = resume_from.get("subtasks")
+            q = resume_from.get("question", prompt)
+            for event in stream_agent(q, subtasks=subtasks, resume_from=resume_from):
+                yield f"data: {json.dumps(event)}\n\n"
+        else:
+            subtasks = None
+            try:
+                subtasks = planner.decompose_task(prompt)
+                yield f"data: {json.dumps({'type': 'subtasks', 'subtasks': subtasks})}\n\n"
+            except Exception as e:
+                yield f"data: {json.dumps({'type': 'subtasks', 'subtasks': [], 'error': str(e)})}\n\n"
 
-        for event in stream_agent(prompt, subtasks=subtasks):
-            yield f"data: {json.dumps(event)}\n\n"
+            for event in stream_agent(prompt, subtasks=subtasks):
+                yield f"data: {json.dumps(event)}\n\n"
 
     return Response(generate(), mimetype="text/event-stream", headers={
         "Cache-Control": "no-cache",

@@ -1,46 +1,54 @@
 """Generalized sub-agent for task delegation."""
 
+import platform as _platform
+
 from agent.llm import call_llm
 from agent.parser import parse_output
 from agent.tools import TOOLS
+from agent.log_utils import debug as _debug
 
-SUB_AGENT_PROMPT = """
-You are an AI assistant with access to the user's local machine.
 
-You can:
-- Read, write, and update files in the workspace
-- Execute shell commands
-- Search the web
+def _env_context():
+    system = _platform.system()
+    arch = _platform.machine()
+    is_win = system == "Windows"
+    cmd = "dir, type, findstr, cd, mkdir, Get-ChildItem" if is_win else "ls, cat, grep, cd, mkdir, pwd, find"
+    return f"Environment: {system} ({arch})\nCommands: {cmd}"
 
-Always follow this format:
-Thought: your reasoning
-Action: tool_name
-Action Input: input for the tool
 
-Stop after Action Input. Do not generate an Observation — it will be added by the system.
+SUB_AGENT_PROMPT_TEMPLATE = """You are an AI assistant with access to the user's local machine.
 
-Available tools:
-- read_file  — read a file from the workspace. Input: relative file path
-- read_file_partial — read a file with line offset and limit. Input: <path>|<offset>|<limit>
-- write_file — write content to a file. Input: first line = path, rest = content
-- update_file — replace specific text in a file. Input: first line = path, then ---OLD---\\n<old>\\n---NEW---\\n<new>
-- run_command — execute a shell command. Input: command string
-- web_search — search the web. Input: search query
-- FINISH — submit final answer. Input: final result
+{env}
 
-Finish with FINISH when the task is complete.
-"""
+Tools:
+- list_files — Input: directory path (default: ".")
+- read_file — Input: path (relative to workspace, or absolute)
+- read_file_partial — Input: path|offset|limit
+- write_file — Input: first line = path, rest = content
+- update_file — Input: path, then ---OLD---, text, ---NEW---, replacement
+- run_command — Input: shell command
+- web_search — Input: search query
+- FINISH — Input: final result
+
+Rules:
+1. ONLY ONE Thought, Action, Action Input per response.
+2. Stop after Action Input — never add Observation.
+3. Files without full path are in the workspace root.
+4. Use absolute paths for files outside workspace.
+5. Do NOT call FINISH until you've verified your work.
+
+Example:
+Thought: I should list the workspace files first.
+Action: run_command
+Action Input: dir
+
+Always use exactly: Thought:  Action:  Action Input:"""
 
 
 def get_sub_agent_prompt(task):
-    return f"""{SUB_AGENT_PROMPT}
-
-Your task:
-{task}
-
-Remember: Generate ONLY ONE Thought and ONE Action per response.
-Stop after Action Input. Do not generate Observation.
-"""
+    env = _env_context()
+    prompt = SUB_AGENT_PROMPT_TEMPLATE.format(env=env)
+    return prompt + "\n\nYour task:\n" + task + "\n\nStart with one Thought and one Action."
 
 
 class SubAgent:
@@ -49,10 +57,18 @@ class SubAgent:
 
     def run(self, task):
         steps = []
+        for step_data, result, is_done in self.run_stream(task):
+            steps.append(step_data)
+            if is_done:
+                return steps, result
+        return steps, "Maximum steps reached in sub-agent."
+
+    def run_stream(self, task):
+        """Generator that yields (step_data, result_or_None, is_done) for each step."""
         scratchpad = ""
         system_prompt = get_sub_agent_prompt(task)
 
-        for _ in range(self.max_steps):
+        for step_num in range(self.max_steps):
             prompt = f"""
 {system_prompt}
 
@@ -60,36 +76,41 @@ class SubAgent:
 """
 
             output = call_llm(prompt)
+            _debug("[subagent] LLM output: " + output[:500])
             parsed = parse_output(output)
+            _debug("[subagent] parsed: " + str(parsed))
             action = parsed["action"]
             action_input = parsed["action_input"]
 
             if action == "FINISH":
-                steps.append({
+                step_data = {
                     "thought": parsed["thought"],
                     "action": action,
                     "action_input": action_input,
                     "observation": "Task completed by sub-agent",
-                })
-                return steps, action_input
+                }
+                yield step_data, action_input, True
+                return
 
             if action not in TOOLS:
-                steps.append({
+                step_data = {
                     "thought": parsed["thought"],
                     "action": action,
                     "action_input": action_input,
                     "observation": f"Unknown tool: {action}",
-                })
-                return steps, f"Error: Unknown tool {action}"
+                }
+                yield step_data, f"Error: Unknown tool {action}", True
+                return
 
             tool_result = TOOLS[action](action_input)
 
-            steps.append({
+            step_data = {
                 "thought": parsed["thought"],
                 "action": action,
                 "action_input": action_input,
                 "observation": str(tool_result),
-            })
+            }
+            yield step_data, None, False
 
             scratchpad += f"""
     Thought: {parsed['thought']}
@@ -98,4 +119,11 @@ class SubAgent:
     Observation: {tool_result}
 """
 
-        return steps, "Maximum steps reached in sub-agent."
+        # Max steps reached — yield the last step data as final
+        last_data = {
+            "observation": "Maximum steps reached in sub-agent.",
+            "thought": "",
+            "action": "FINISH",
+            "action_input": "Maximum steps reached in sub-agent.",
+        }
+        yield last_data, "Maximum steps reached in sub-agent.", True

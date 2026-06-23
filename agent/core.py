@@ -1,10 +1,9 @@
-import concurrent.futures
 from agent.llm import call_llm
 from agent.parser import parse_output
 from agent.prompts import build_system_prompt
 from agent.tools import TOOLS
 from agent.memory import Memory
-from agent.sub_agents import SubAgent
+from agent.log_utils import debug as _debug
 
 DEBUG = True
 MAX_STEPS = 8
@@ -27,32 +26,22 @@ def _agent_step(question, subtasks, scratchpad):
 
     system_prompt = build_system_prompt(subtasks)
 
-    prompt = f"""
-            {system_prompt}
-
-            {knowledge_block}
-
-            Recent Conversation:
-            {short_context}
-
-            Question:
-            {question}
-
-            {scratchpad}
-            """
+    prompt = system_prompt + "\n\n" + knowledge_block + "\n\nRecent Conversation:\n" + short_context + "\n\nQuestion:\n" + question + "\n\n" + scratchpad
 
     llm_output = call_llm(prompt)
 
     if DEBUG:
-        print("\n===================== LLM Output ====================")
-        print(llm_output)
+        _debug("=== Prompt (first 500) ===")
+        _debug(prompt[:500])
+        _debug("=== LLM Output ===")
+        _debug(llm_output)
 
     parsed = parse_output(llm_output)
     if DEBUG:
-        print("PARSED=", parsed)
+        _debug("PARSED=" + str(parsed))
     action = parsed["action"].strip().lower()
 
-    if action == "FINISH":
+    if action == "finish":
         return action, parsed, None, None, scratchpad
 
     if action not in TOOLS:
@@ -60,7 +49,7 @@ def _agent_step(question, subtasks, scratchpad):
 
     tool_result = TOOLS[action](parsed["action_input"])
     if DEBUG:
-        print("TOOL RESULT=", tool_result)
+        _debug("TOOL RESULT=" + str(tool_result))
 
     step_entry = f"""
     Thought: {parsed['thought']}
@@ -69,8 +58,8 @@ def _agent_step(question, subtasks, scratchpad):
     Observation: {tool_result}
     """
     if DEBUG:
-        print("\n--- ReAct Step ---")
-        print(step_entry.strip())
+        _debug("--- ReAct Step ---")
+        _debug(step_entry.strip())
 
     return action, parsed, str(tool_result), step_entry, scratchpad + step_entry
 
@@ -86,7 +75,7 @@ def run_agent(question, subtasks=None):
             question, subtasks, scratchpad
         )
 
-        if action == "FINISH":
+        if action == "finish":
             answer = parsed["action_input"]
             memory.add_short_term("assistant", answer)
             memory.add_long_term(
@@ -116,87 +105,25 @@ def run_agent(question, subtasks=None):
     return {"steps": steps_data, "final_answer": "Maximum Steps Reached."}
 
 
-def _run_single_sub_agent(task):
-    agent = SubAgent()
-    steps, result = agent.run(task)
-    return task, steps, result
-
-
-def _synthesize_answer(question, subtask_results):
-    results_text = "\n".join(
-        f"Subtask: {t}\nResult: {r}\n---" for t, r in subtask_results
-    )
-    prompt = f"""You are a helpful assistant. Given a user's question and the results from several subtasks, provide a clear, natural final answer.
-
-User question:
-{question}
-
-Subtask results:
-{results_text}
-
-Final answer:"""
-    return call_llm(prompt)
-
-
-def stream_agent(question, subtasks=None):
+def stream_agent(question, subtasks=None, resume_from=None):
     memory.reset_short_term()
     memory.add_short_term("user", question)
 
-    all_steps = []
+    if resume_from:
+        steps_data = list(resume_from.get("steps_data", []))
+        scratchpad = resume_from.get("scratchpad", "")
+        start_step = resume_from.get("step_count", 0)
+    else:
+        steps_data = []
+        scratchpad = ""
+        start_step = 0
 
-    if subtasks and len(subtasks) > 1:
-        # --- DELEGATION MODE ---
-        yield {"type": "delegation", "message": "Breaking down the task...", "subtasks": subtasks}
-
-        yield {"type": "delegation", "message": "Running subtasks..."}
-
-        parallel_batches = []
-        current_batch = []
-        for i, task in enumerate(subtasks):
-            current_batch.append(task)
-            if len(current_batch) >= 2 or i == len(subtasks) - 1:
-                parallel_batches.append(current_batch)
-                current_batch = []
-
-        all_results = []
-        for batch in parallel_batches:
-            if len(batch) == 1:
-                task = batch[0]
-                _, steps, result = _run_single_sub_agent(task)
-                for s in steps:
-                    s["subtask"] = task
-                    yield {"type": "step", **s}
-                all_steps.extend(steps)
-                all_results.append((task, result))
-            else:
-                with concurrent.futures.ThreadPoolExecutor(max_workers=len(batch)) as executor:
-                    futures = {executor.submit(_run_single_sub_agent, task): task for task in batch}
-                    for future in concurrent.futures.as_completed(futures):
-                        task = futures[future]
-                        _, steps, result = future.result()
-                        for s in steps:
-                            s["subtask"] = task
-                            yield {"type": "step", **s}
-                        all_steps.extend(steps)
-                        all_results.append((task, result))
-
-        final = _synthesize_answer(question, all_results)
-        memory.add_short_term("assistant", final)
-        memory.add_long_term(f"\nQuestion:\n{question}\n\nAnswer:\n{final}\n")
-
-        yield {"type": "done", "final_answer": final, "steps": all_steps}
-        return
-
-    # --- STANDALONE MODE ---
-    memory.add_short_term("user", question)
-    steps_data = []
-    scratchpad = ""
-    for step_num in range(MAX_STEPS):
+    for step_num in range(start_step, start_step + MAX_STEPS):
         action, parsed, tool_result, step_entry, scratchpad = _agent_step(
             question, subtasks, scratchpad
         )
 
-        if action == "FINISH":
+        if action == "finish":
             answer = parsed["action_input"]
             memory.add_short_term("assistant", answer)
             memory.add_long_term(
@@ -237,8 +164,16 @@ def stream_agent(question, subtasks=None):
             "observation": tool_result,
         })
 
+    # Step limit reached — yield paused event with resume context
     yield {
-        "type": "done",
-        "final_answer": "Maximum Steps Reached.",
+        "type": "paused",
+        "message": "Step limit reached. Continue?",
+        "resume_context": {
+            "scratchpad": scratchpad,
+            "steps_data": steps_data,
+            "step_count": start_step + MAX_STEPS,
+            "question": question,
+            "subtasks": subtasks,
+        },
         "steps": steps_data,
     }

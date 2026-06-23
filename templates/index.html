@@ -154,6 +154,7 @@
       display: inline-block; flex-shrink: 0;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
     .hidden { display: none !important; }
 
     /* ── Workspace Lock Overlay ── */
@@ -163,6 +164,30 @@
     }
     .ws-lock-msg.hidden { display: none; }
     .ws-lock-msg .icon { font-size: 16px; }
+    .answer { line-height: 1.7; font-size: 15px; }
+    .answer h1, .answer h2, .answer h3 { margin: 0.6em 0 0.3em; }
+    .answer h1 { font-size: 1.3em; }
+    .answer h2 { font-size: 1.15em; }
+    .answer h3 { font-size: 1.05em; }
+    .answer p { margin: 0.4em 0; }
+    .answer ul, .answer ol { margin: 0.3em 0; padding-left: 1.5em; }
+    .answer li { margin: 0.15em 0; }
+    .answer code {
+      font-family: 'JetBrains Mono', monospace; font-size: 13px;
+      background: rgba(255,255,255,0.5); padding: 1px 5px; border-radius: 4px;
+    }
+    .answer pre {
+      background: rgba(255,255,255,0.5); padding: 10px 12px; border-radius: 8px;
+      overflow-x: auto; margin: 0.5em 0;
+    }
+    .answer pre code { background: none; padding: 0; }
+    .answer strong { font-weight: 600; }
+    .clear-btn {
+      background: none; border: none; color: #94a3b8; font-size: 12px;
+      cursor: pointer; padding: 2px 8px; border-radius: 4px;
+      transition: color 0.15s;
+    }
+    .clear-btn:hover { color: #ef4444; }
   </style>
 </head>
 <body>
@@ -172,6 +197,7 @@
       <span class="ws-icon">&#128193;</span>
       <input type="text" class="ws-input" id="wsInput" value="{{ workspace }}" spellcheck="false" />
       <button class="ws-btn" id="wsSaveBtn">Update</button>
+      <button class="clear-btn" id="clearBtn">&#128465;</button>
     </div>
     <div class="ws-error" id="wsError"></div>
   </div>
@@ -193,6 +219,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script>
     const chat = document.getElementById('chat');
     const input = document.getElementById('promptInput');
@@ -203,9 +230,80 @@
     const wsSaveBtn = document.getElementById('wsSaveBtn');
     const wsError = document.getElementById('wsError');
     const wsLockMsg = document.getElementById('wsLockMsg');
+    const clearBtn = document.getElementById('clearBtn');
     let locked = false;
     let wsValid = true;
 
+    // ── History persistence ──
+    const STORAGE_KEY = 'react_chat_history';
+
+    function saveHistory() {
+      const messages = [];
+      chat.querySelectorAll('.message').forEach(el => {
+        const role = el.classList.contains('user') ? 'user' : 'assistant';
+        const bubble = el.querySelector('.bubble');
+        if (bubble) {
+          // For user messages, store text content
+          if (role === 'user') {
+            messages.push({ role, text: bubble.textContent });
+          } else {
+            // For assistant messages, store the answer text and step count
+            const answerEl = bubble.querySelector('.answer');
+            const text = answerEl ? answerEl.textContent : bubble.textContent;
+            messages.push({ role, text });
+          }
+        }
+      });
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+      } catch(e) {}
+    }
+
+    function loadHistory() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const messages = JSON.parse(raw);
+        messages.forEach(({ role, text }) => {
+          if (role === 'user') {
+            appendMessage('user', `<div class="bubble">${escapeHtml(text)}</div>`);
+          } else if (text) {
+            const html = `<div class="bubble"><div class="answer">${renderMarkdown(text)}</div></div>`;
+            appendMessage('assistant', html);
+          }
+        });
+      } catch(e) {}
+    }
+
+    function clearHistory() {
+      if (!confirm('Clear all chat history?')) return;
+      chat.innerHTML = '';
+      localStorage.removeItem(STORAGE_KEY);
+    }
+
+    // ── Markdown ──
+    function renderMarkdown(text) {
+      if (!text) return '';
+      try {
+        return marked.parse(text);
+      } catch(e) {
+        return escapeHtml(text);
+      }
+    }
+
+    // ── Truncate observations ──
+    function truncateObs(action, obs) {
+      if (!obs) return '';
+      if (action === 'read_file') {
+        return obs.length > 150 ? obs.substring(0, 150) + '...' : obs;
+      }
+      if (action === 'run_command') {
+        return obs.length > 300 ? obs.substring(0, 300) + '...' : obs;
+      }
+      return obs;
+    }
+
+    // ── Workspace ──
     function setWorkspaceLock(valid) {
       wsValid = valid;
       wsLockMsg.classList.toggle('hidden', valid);
@@ -247,11 +345,9 @@
       });
     }
 
-    // Validate workspace on page load
     fetch('/api/workspace').then(r => r.json()).then(data => {
       if (data.path) {
         const p = data.path;
-        // Verify path exists by trying to use it
         fetch('/api/workspace', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -264,7 +360,9 @@
 
     wsSaveBtn.addEventListener('click', saveWorkspace);
     wsInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveWorkspace(); });
+    clearBtn.addEventListener('click', clearHistory);
 
+    // ── Chat ──
     function appendMessage(role, html) {
       const div = document.createElement('div');
       div.className = `message ${role}`;
@@ -272,27 +370,6 @@
       chat.appendChild(div);
       chat.scrollTop = chat.scrollHeight;
       return div;
-    }
-
-    function appendSteps(container, steps) {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'steps';
-      steps.forEach((s, i) => {
-        const stepDiv = document.createElement('div');
-        stepDiv.className = 'step';
-        const agentTag = s.agent ? `<span class="agent-tag">${escapeHtml(s.agent)}</span>` : '';
-        stepDiv.innerHTML = `
-          <div class="label">Step ${i + 1} &mdash; ${escapeHtml(s.action)}${agentTag}</div>
-          <div class="label" style="margin-top:6px">Thought</div>
-          <div class="value">${escapeHtml(s.thought)}</div>
-          <div class="label" style="margin-top:6px">Action Input</div>
-          <div class="value code">${escapeHtml(s.action_input)}</div>
-          <div class="label" style="margin-top:6px">Observation</div>
-          <div class="value">${escapeHtml(s.observation)}</div>
-        `;
-        wrapper.appendChild(stepDiv);
-      });
-      container.appendChild(wrapper);
     }
 
     function escapeHtml(text) {
@@ -310,6 +387,104 @@
       status.classList.toggle('hidden', !lockedState);
     }
 
+    // ── Resume (continue after pause) ──
+    function fetchResume(resumeContext, bubble, stepsContainer, stepIndicator) {
+      fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: resumeContext.question, resume_from: resumeContext })
+      }).then(async (response) => {
+        if (!response.ok) throw new Error(`Server error: ${response.status}`);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let prevCount = stepsContainer.querySelectorAll('.step').length;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const data = JSON.parse(line.slice(6));
+            if (data.type === 'step') {
+              stepIndicator.textContent = `Running: ${data.action}`;
+              prevCount++;
+              const stepDiv = document.createElement('div');
+              stepDiv.className = 'step';
+              stepDiv.style.animation = 'fadeIn 0.25s ease';
+              stepDiv.innerHTML = `
+                <div class="label">Step ${prevCount} &mdash; ${escapeHtml(data.action)}</div>
+                <div class="label" style="margin-top:6px">Thought</div>
+                <div class="value">${escapeHtml(data.thought)}</div>
+                <div class="label" style="margin-top:6px">Action Input</div>
+                <div class="value code">${escapeHtml(data.action_input)}</div>
+                <div class="label" style="margin-top:6px">Observation</div>
+                <div class="value">${escapeHtml(truncateObs(data.action, data.observation))}</div>
+              `;
+              stepsContainer.appendChild(stepDiv);
+              chat.scrollTop = chat.scrollHeight;
+            } else if (data.type === 'paused') {
+              // Another pause — replace continue button
+              const oldBtn = stepsContainer.querySelector('button');
+              if (oldBtn) oldBtn.remove();
+              const pauseNote = document.createElement('div');
+              pauseNote.style.cssText = 'margin:8px 0;font-size:13px;color:#64748b;';
+              pauseNote.textContent = 'Reached step limit again. Continue?';
+              stepsContainer.appendChild(pauseNote);
+              const newBtn = document.createElement('button');
+              newBtn.textContent = 'Continue';
+              newBtn.className = 'ws-btn';
+              newBtn.style.marginTop = '4px';
+              newBtn.addEventListener('click', () => {
+                newBtn.disabled = true;
+                newBtn.textContent = 'Continuing...';
+                fetchResume(data.resume_context, bubble, stepsContainer, stepIndicator);
+              });
+              stepsContainer.appendChild(newBtn);
+              chat.scrollTop = chat.scrollHeight;
+            } else if (data.type === 'done') {
+              const statusEl = bubble.querySelector('.status');
+              if (statusEl) statusEl.remove();
+              // Remove any continue button/pause note
+              const btn = stepsContainer.querySelector('button');
+              if (btn) btn.remove();
+              const notes = stepsContainer.querySelectorAll('div');
+              notes.forEach(n => { if (n.textContent.includes('Continue')) n.remove(); });
+
+              const answerEl = document.createElement('div');
+              answerEl.className = 'answer';
+              answerEl.innerHTML = renderMarkdown(data.final_answer || '');
+              bubble.insertBefore(answerEl, stepsContainer);
+
+              const totalSteps = stepsContainer.querySelectorAll('.step').length;
+              if (totalSteps) {
+                const details = document.createElement('details');
+                details.className = 'steps-toggle';
+                const summary = document.createElement('summary');
+                summary.textContent = `View Agent Reasoning (${totalSteps} steps)`;
+                details.appendChild(summary);
+                while (stepsContainer.firstChild) {
+                  details.appendChild(stepsContainer.firstChild);
+                }
+                bubble.appendChild(details);
+                stepsContainer.remove();
+              }
+              saveHistory();
+            }
+          }
+        }
+      }).catch((err) => {
+        const errEl = document.createElement('div');
+        errEl.style.cssText = 'color:#dc2626;margin-top:8px;font-size:13px;';
+        errEl.textContent = 'Continue error: ' + err.message;
+        stepsContainer.appendChild(errEl);
+      });
+    }
+
+    // ── Send ──
     function handleSend() {
       const prompt = input.value.trim();
       if (!prompt || locked || !wsValid) return;
@@ -319,9 +494,11 @@
       input.value = '';
 
       appendMessage('user', `<div class="bubble">${escapeHtml(prompt)}</div>`);
+      saveHistory();
 
       const assistantDiv = appendMessage('assistant', `
         <div class="bubble" id="assistantBubble">
+          <div class="steps" id="stepsContainer"></div>
           <div class="status" style="margin:0;padding:0;color:#475569;">
             <span class="spinner"></span>
             <span id="stepIndicator">Initializing...</span>
@@ -330,8 +507,27 @@
       `);
 
       const bubble = document.getElementById('assistantBubble');
+      const stepsContainer = document.getElementById('stepsContainer');
       const stepIndicator = document.getElementById('stepIndicator');
-      let delegationDiv = null;
+      let stepCount = 0;
+
+      function addStepCard(data) {
+        stepCount++;
+        const stepDiv = document.createElement('div');
+        stepDiv.className = 'step';
+        stepDiv.style.animation = 'fadeIn 0.25s ease';
+        stepDiv.innerHTML = `
+          <div class="label">Step ${stepCount} &mdash; ${escapeHtml(data.action)}</div>
+          <div class="label" style="margin-top:6px">Thought</div>
+          <div class="value">${escapeHtml(data.thought)}</div>
+          <div class="label" style="margin-top:6px">Action Input</div>
+          <div class="value code">${escapeHtml(data.action_input)}</div>
+          <div class="label" style="margin-top:6px">Observation</div>
+          <div class="value">${escapeHtml(truncateObs(data.action, data.observation))}</div>
+        `;
+        stepsContainer.appendChild(stepDiv);
+        chat.scrollTop = chat.scrollHeight;
+      }
 
       fetch('/api/chat', {
         method: 'POST',
@@ -344,7 +540,6 @@
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
-        let steps = [];
         let finalAnswer = '';
 
         while (true) {
@@ -359,56 +554,76 @@
             if (!line.startsWith('data: ')) continue;
             const data = JSON.parse(line.slice(6));
 
-            if (data.type === 'subtasks') {
-              const count = (data.subtasks || []).length;
-              stepIndicator.textContent = `Planning (${count} subtasks)...`;
-            } else if (data.type === 'delegation') {
-              stepIndicator.textContent = data.message || 'Delegating...';
-              if (!delegationDiv) {
-                delegationDiv = document.createElement('div');
-                delegationDiv.className = 'delegation-note';
-                bubble.appendChild(delegationDiv);
-              }
-              delegationDiv.textContent = '> ' + (data.message || '');
-            } else if (data.type === 'step') {
-              const stepLabel = data.subtask
-                ? `[${data.agent || 'agent'}] ${data.action}`
-                : `${data.action}`;
-              stepIndicator.textContent = `Step: ${stepLabel}`;
-              steps.push(data);
+            if (data.type === 'step') {
+              stepIndicator.textContent = `Running: ${data.action}`;
+              addStepCard(data);
+            } else if (data.type === 'paused') {
+              const statusEl = bubble.querySelector('.status');
+              if (statusEl) statusEl.remove();
+
+              // Remove spinner, show continue button
+              stepIndicator.textContent = 'Step limit reached.';
+              const pauseNote = document.createElement('div');
+              pauseNote.style.cssText = 'margin:8px 0;font-size:13px;color:#64748b;';
+              pauseNote.textContent = 'Reached step limit. Continue?';
+              stepsContainer.appendChild(pauseNote);
+
+              const continueBtn = document.createElement('button');
+              continueBtn.textContent = 'Continue';
+              continueBtn.className = 'ws-btn';
+              continueBtn.style.marginTop = '4px';
+              continueBtn.addEventListener('click', () => {
+                continueBtn.disabled = true;
+                continueBtn.textContent = 'Continuing...';
+                // Add spinner back
+                const spin = document.createElement('span');
+                spin.className = 'spinner';
+                spin.style.cssText = 'width:12px;height:12px;display:inline-block;margin-right:6px;';
+                continueBtn.textContent = '';
+                continueBtn.appendChild(spin);
+                continueBtn.appendChild(document.createTextNode(' Continuing...'));
+
+                fetchResume(data.resume_context, bubble, stepsContainer, stepIndicator);
+              });
+              stepsContainer.appendChild(continueBtn);
+              chat.scrollTop = chat.scrollHeight;
             } else if (data.type === 'done') {
               finalAnswer = data.final_answer || '';
-              steps = data.steps || [];
 
-              bubble.innerHTML = '';
+              const statusEl = bubble.querySelector('.status');
+              if (statusEl) statusEl.remove();
 
               const answerEl = document.createElement('div');
-              answerEl.style.marginBottom = steps.length ? '8px' : '0';
-              answerEl.textContent = finalAnswer;
-              bubble.appendChild(answerEl);
+              answerEl.className = 'answer';
+              answerEl.innerHTML = renderMarkdown(finalAnswer);
+              bubble.insertBefore(answerEl, stepsContainer);
 
-              if (steps.length) {
+              const stepsInContainer = stepsContainer.children.length;
+              if (stepsInContainer) {
                 const details = document.createElement('details');
                 details.className = 'steps-toggle';
                 const summary = document.createElement('summary');
-                const agentCount = new Set(steps.filter(s => s.agent).map(s => s.agent)).size;
-                const label = agentCount > 0
-                  ? `View Agent Reasoning (${steps.length} steps, ${agentCount} agents)`
-                  : `View Agent Reasoning (${steps.length} steps)`;
-                summary.textContent = label;
+                summary.textContent = `View Agent Reasoning (${stepsInContainer} steps)`;
                 details.appendChild(summary);
-                appendSteps(details, steps);
+                while (stepsContainer.firstChild) {
+                  details.appendChild(stepsContainer.firstChild);
+                }
                 bubble.appendChild(details);
+                stepsContainer.remove();
               }
+              saveHistory();
             }
           }
         }
       }).catch((err) => {
-        bubble.innerHTML = `<div style="color:#dc2626;">Error: ${err.message}</div>`;
+        bubble.innerHTML = `<div class="bubble"><div style="color:#dc2626;">Error: ${err.message}</div></div>`;
       }).finally(() => {
         setLocked(false);
       });
     }
+
+    // Load saved history on startup
+    loadHistory();
 
     sendBtn.addEventListener('click', handleSend);
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSend(); });

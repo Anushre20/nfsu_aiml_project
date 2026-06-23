@@ -1,5 +1,6 @@
 import re
 from typing import Any
+from agent.log_utils import debug as _debug
 
 
 class TaskPlanner:
@@ -100,11 +101,17 @@ Output numbered tasks only."""
 
     def _call_llm(self, prompt: str) -> str:
         if callable(self.llm):
-            return str(self.llm(prompt))
+            result = str(self.llm(prompt))
+            _debug("[planner] output: " + result[:500])
+            return result
         if hasattr(self.llm, "call"):
-            return str(self.llm.call(prompt))
+            result = str(self.llm.call(prompt))
+            _debug("[planner] output: " + result[:500])
+            return result
         if hasattr(self.llm, "run"):
-            return str(self.llm.run(prompt))
+            result = str(self.llm.run(prompt))
+            _debug("[planner] output: " + result[:500])
+            return result
         raise TypeError("llm must be callable or expose call()/run().")
 
     def _parse_numbered_list(self, text: str) -> list[str]:

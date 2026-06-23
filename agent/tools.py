@@ -33,15 +33,20 @@ def web_search(query):
         return f"Search Error: {e}"
 
 
+def _resolve_path(path):
+    p = Path(path)
+    if p.is_absolute():
+        return p.resolve(), True
+    full = (_WORKSPACE_ROOT / path).resolve()
+    if not str(full).startswith(str(_WORKSPACE_ROOT)):
+        return full, False
+    return full, True
+
+
 def read_file(path):
     try:
-        full_path = (_WORKSPACE_ROOT / path).resolve()
-
-        print("\nDEBUG READ")
-        print("WORKSPACE =", _WORKSPACE_ROOT)
-        print("REQUESTED =", path)
-        print("FULL PATH =", full_path)
-        if not str(full_path).startswith(str(_WORKSPACE_ROOT)):
+        full_path, allowed = _resolve_path(path)
+        if not allowed:
             return "Error: Path is outside the workspace."
         if not full_path.exists():
             return f"Error: File not found: {path}"
@@ -54,8 +59,13 @@ def read_file(path):
 
 def read_file_partial(path, offset=0, limit=None):
     try:
-        full_path = (_WORKSPACE_ROOT / path).resolve()
-        if not str(full_path).startswith(str(_WORKSPACE_ROOT)):
+        if limit is None and isinstance(path, str) and "|" in path:
+            parts = path.split("|", 2)
+            path = parts[0].strip()
+            offset = int(parts[1].strip()) if len(parts) > 1 and parts[1].strip() else 0
+            limit = int(parts[2].strip()) if len(parts) > 2 and parts[2].strip() else None
+        full_path, allowed = _resolve_path(path)
+        if not allowed:
             return "Error: Path is outside the workspace."
         if not full_path.exists():
             return f"Error: File not found: {path}"
@@ -96,8 +106,8 @@ def write_file(raw_input):
         return "Error: write_file requires first line as file path, remaining lines as content."
 
     try:
-        full_path = (_WORKSPACE_ROOT / path).resolve()
-        if not str(full_path).startswith(str(_WORKSPACE_ROOT)):
+        full_path, allowed = _resolve_path(path)
+        if not allowed:
             return "Error: Path is outside the workspace."
         full_path.parent.mkdir(parents=True, exist_ok=True)
         full_path.write_text(content, encoding="utf-8")
@@ -127,8 +137,8 @@ def update_file(raw_input):
     new_string = after_old[idx_new + len(sep_new):]
 
     try:
-        full_path = (_WORKSPACE_ROOT / path).resolve()
-        if not str(full_path).startswith(str(_WORKSPACE_ROOT)):
+        full_path, allowed = _resolve_path(path)
+        if not allowed:
             return "Error: Path is outside the workspace."
         if not full_path.exists():
             return f"Error: File not found: {path}"
@@ -145,6 +155,24 @@ def update_file(raw_input):
         return f"Update Error: {e}"
 
 
+def list_files(path="."):
+    try:
+        full_path, allowed = _resolve_path(path)
+        if not allowed:
+            return "Error: Path is outside the workspace."
+        if not full_path.exists():
+            return f"Error: Path not found: {path}"
+        items = []
+        for item in sorted(full_path.iterdir()):
+            if item.is_dir():
+                items.append(f"[DIR] {item.name}")
+            else:
+                items.append(f"[FILE] {item.name}")
+        return "\n".join(items)
+    except Exception as e:
+        return f"List Error: {e}"
+
+
 def run_command(command):
     try:
         result = _subprocess.run(
@@ -153,7 +181,7 @@ def run_command(command):
             capture_output=True,
             text=True,
             timeout=30,
-            cwd=_WORKSPACE_ROOT,
+            cwd=str(_WORKSPACE_ROOT),
         )
         output = ""
         if result.stdout:

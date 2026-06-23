@@ -1,10 +1,4 @@
-torch
-langchain
-langchain-ollama
-sentence-transformers
-faiss-cpu
+ollama
 ddgs
-huggingface_hub
-python-dotenv
 flask
 

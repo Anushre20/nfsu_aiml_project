@@ -23,7 +23,7 @@ for f in files:
 check("all files syntax OK", True)
 
 # --- import chain ---
-from agent.tools import get_workspace, set_workspace, read_file, read_file_partial, update_file, TOOLS
+from agent.tools import get_workspace, set_workspace, read_file, read_file_partial, update_file, list_files, TOOLS
 check("tools import", True)
 
 from agent.llm import call_llm
@@ -45,9 +45,10 @@ from agent.parser import parse_output
 check("parser import", True)
 
 # --- new tools in TOOLS ---
+check("list_files in TOOLS", "list_files" in TOOLS)
 check("read_file_partial in TOOLS", "read_file_partial" in TOOLS)
 check("update_file in TOOLS", "update_file" in TOOLS)
-check("6 tools registered", len(TOOLS) == 6, f"got {len(TOOLS)}")
+check("7 tools registered", len(TOOLS) == 7, f"got {len(TOOLS)}")
 
 # --- memory reset ---
 m = Memory()
@@ -69,6 +70,26 @@ ok = "b" in r and "c" in r and "d" in r and "a" not in r.split("}")[1]
 os.remove(".test_partial.txt")
 check("read_file_partial offset+limit works", ok, r[:60])
 
+with open(".test_pipe.txt","w") as f: f.write("line0\nline1\nline2\n")
+r2 = read_file_partial(".test_pipe.txt|1|2")
+ok2 = "line1" in r2 and "line2" in r2 and "line0" not in r2.split("}")[1]
+os.remove(".test_pipe.txt")
+check("read_file_partial pipe input works", ok2, r2[:60])
+
+# --- list_files ---
+lf = list_files(".")
+check("list_files returns entries", lf.startswith("[FILE]") or lf.startswith("[DIR]"), lf[:80])
+
+# --- read_file absolute path support ---
+import tempfile
+with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as tf:
+    tf.write("absolute path test")
+    tf_path = tf.name
+r3 = read_file(tf_path)
+ok3 = r3 == "absolute path test"
+os.remove(tf_path)
+check("read_file absolute path works", ok3, r3[:60])
+
 # --- update_file ---
 with open(".test_upd.txt","w") as f: f.write("hello world\nfoo bar\n")
 r = update_file(".test_upd.txt\n---OLD---\nhello world\n---NEW---\nhi there")
@@ -89,6 +110,10 @@ p = parse_output("Thought: a\nAction: FINISH\nAction Input:")
 check("parser empty action_input", p["action_input"] == "")
 p2 = parse_output("garbage")
 check("parser defaults to FINISH", p2["action"] == "FINISH")
+p3 = parse_output("Thought: The Action: keyword is fine now\nAction: read_file\nAction Input: main.py")
+check("parser handles Action: in thought", p3["thought"] == "The Action: keyword is fine now" and p3["action"] == "read_file")
+p4 = parse_output("Thought: a\nAction: FINISH\nAction Input: some\nAction Input: not parsed")
+check("parser takes first Action Input only", p4["action_input"] == "some")
 
 # --- Flask API ---
 from app import app
