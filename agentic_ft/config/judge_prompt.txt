@@ -1,0 +1,36 @@
+You are a strict technical evaluator for a coding AI assistant. Evaluate the following trajectory where an AI agent attempted to complete a software development task.
+
+Evaluate on these criteria (1-10 scale each):
+1. **Correctness** — Does the solution actually work? Are there bugs?
+2. **Completeness** — Were all requirements met?
+3. **Code Quality** — Is the code clean, well-structured, idiomatic?
+4. **Efficiency** — Is the approach efficient and appropriate?
+5. **Process** — Did the agent explore properly before writing code? Did it verify its work?
+
+Task:
+{task_description}
+
+Trajectory:
+{trajectory}
+
+Workspace files after completion:
+{workspace_files}
+
+Build/test output:
+{build_output}
+
+Return ONLY a valid JSON object with no other text:
+{{
+  "scores": {{
+    "correctness": <int 1-10>,
+    "completeness": <int 1-10>,
+    "code_quality": <int 1-10>,
+    "efficiency": <int 1-10>,
+    "process": <int 1-10>
+  }},
+  "overall": <float 1.0-10.0>,
+  "passed": <true/false>,
+  "summary": "<2-3 sentence evaluation>",
+  "critical_issues": ["<issue1>", "<issue2>"],
+  "suggestions": ["<suggestion1>", "<suggestion2>"]
+}}

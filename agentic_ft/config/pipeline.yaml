@@ -1,0 +1,46 @@
+# Pipeline configuration for agentic fine-tuning data collection
+# Edit this file to adjust paths and model settings
+
+pipeline:
+  # Which models to use
+  coder_model: "qwen3-coder-30b-a3b"
+  judge_model: "deepseek-r1-distill-70b"
+
+  # Judge API endpoint
+  judge_api_url: "http://localhost:8081/v1/chat/completions"
+
+  # Data directories (relative to agentic_ft/)
+  data_dir: "./data"
+  trajectories_dir: "./data/trajectories"
+  evaluations_dir: "./data/evaluations"
+  dpo_pairs_dir: "./data/dpo_pairs"
+
+  # Task sources
+  task_files:
+    - "./tasks/react.jsonl"
+    - "./tasks/node.jsonl"
+    - "./tasks/python.jsonl"
+    - "./tasks/ml.jsonl"
+
+  # Orchestrator settings
+  workspace_base: "./build_workspaces"
+  max_concurrent_builds: 1
+  opencode_binary: "opencode"
+  opencode_config: "./config/opencode.json"
+
+  # Judge settings
+  judge:
+    min_score_for_dpo_good: 8.0
+    max_score_for_dpo_bad: 4.0
+    evaluation_prompt_template: "./config/judge_prompt.txt"
+
+  # LoRA fine-tuning settings (post-collection)
+  lora:
+    r: 16
+    alpha: 32
+    dropout: 0.05
+    target_modules: ["q_proj", "v_proj"]
+    learning_rate: 1e-5
+    batch_size: 4
+    epochs: 3
+    mixed_data_ratio: 0.7

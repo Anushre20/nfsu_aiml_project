@@ -1,0 +1,14 @@
+{
+  "model": "qwen3-coder-30b-a3b",
+  "provider": "ollama",
+  "apiBase": "http://localhost:11434",
+  "temperature": 0.2,
+  "maxTokens": 8192,
+  "customCommands": [
+    {
+      "name": "judge-eval",
+      "command": "python scripts/judge_eval.py",
+      "description": "Evaluate the latest trajectory with the judge model"
+    }
+  ]
+}

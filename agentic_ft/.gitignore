@@ -1,0 +1,26 @@
+# Data
+data/trajectories/*
+data/evaluations/*
+data/dpo_pairs/*
+build_workspaces/*
+!build_workspaces/.gitkeep
+
+# Model files
+*.gguf
+*.safetensors
+*.bin
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+venv/
+.venv/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
