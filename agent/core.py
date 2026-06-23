@@ -6,7 +6,7 @@ from agent.tools import TOOLS
 from agent.memory import Memory
 from agent.sub_agents import SubAgent
 
-DEBUG = False
+DEBUG = True
 MAX_STEPS = 8
 memory = Memory()
 
@@ -50,7 +50,7 @@ def _agent_step(question, subtasks, scratchpad):
     parsed = parse_output(llm_output)
     if DEBUG:
         print("PARSED=", parsed)
-    action = parsed["action"]
+    action = parsed["action"].strip().lower()
 
     if action == "FINISH":
         return action, parsed, None, None, scratchpad

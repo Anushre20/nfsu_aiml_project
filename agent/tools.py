@@ -36,6 +36,11 @@ def web_search(query):
 def read_file(path):
     try:
         full_path = (_WORKSPACE_ROOT / path).resolve()
+
+        print("\nDEBUG READ")
+        print("WORKSPACE =", _WORKSPACE_ROOT)
+        print("REQUESTED =", path)
+        print("FULL PATH =", full_path)
         if not str(full_path).startswith(str(_WORKSPACE_ROOT)):
             return "Error: Path is outside the workspace."
         if not full_path.exists():
@@ -148,6 +153,7 @@ def run_command(command):
             capture_output=True,
             text=True,
             timeout=30,
+            cwd=_WORKSPACE_ROOT,
         )
         output = ""
         if result.stdout:
@@ -162,9 +168,32 @@ def run_command(command):
     except Exception as e:
         return f"Command Error: {e}"
 
+def list_files(path="."):
+    try:
+        full_path = (_WORKSPACE_ROOT / path).resolve()
+
+        if not str(full_path).startswith(str(_WORKSPACE_ROOT)):
+            return "Error: Path is outside workspace."
+
+        if not full_path.exists():
+            return f"Error: Path not found: {path}"
+
+        items = []
+
+        for item in sorted(full_path.iterdir()):
+            if item.is_dir():
+                items.append(f"[DIR] {item.name}")
+            else:
+                items.append(f"[FILE] {item.name}")
+
+        return "\n".join(items)
+
+    except Exception as e:
+        return f"List Error: {e}"
 
 TOOLS = {
      "web_search": web_search,
+     "list_files": list_files,
      "read_file": read_file,
      "read_file_partial": read_file_partial,
      "write_file": write_file,
