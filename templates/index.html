@@ -15,7 +15,6 @@
       color: #1e293b;
     }
 
-    /* ── Glass Header ── */
     .header {
       background: rgba(255,255,255,0.35);
       backdrop-filter: blur(24px);
@@ -31,7 +30,6 @@
       white-space: nowrap;
     }
 
-    /* ── Workspace Controls ── */
     .ws-row {
       flex: 1; min-width: 240px; display: flex; align-items: center; gap: 6px;
     }
@@ -50,21 +48,20 @@
       color: #1e293b; transition: background 0.15s;
     }
     .ws-btn:hover { background: rgba(255,255,255,0.8); }
+    .ws-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .ws-error {
       font-size: 11px; color: #ef4444; margin-top: 2px; min-height: 16px;
       width: 100%; text-align: right;
     }
 
-    /* ── Chat Area ── */
     .chat {
       flex: 1; overflow-y: auto; padding: 24px 28px;
       display: flex; flex-direction: column; gap: 14px;
     }
-    .message { max-width: 780px; width: 100%; margin: 0 auto; }
+    .message { max-width: 860px; width: 100%; margin: 0 auto; }
     .message.user { align-self: flex-end; }
     .message.assistant { align-self: flex-start; }
 
-    /* ── Glass Bubbles ── */
     .bubble {
       padding: 14px 18px; border-radius: 16px; line-height: 1.6; font-size: 14px;
       backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
@@ -79,12 +76,6 @@
       border-bottom-left-radius: 4px;
     }
 
-    .delegation-note {
-      font-size: 12px; color: #0ea5e9; padding: 4px 0; margin-top: 4px;
-      font-weight: 500;
-    }
-
-    /* ── Steps ── */
     .steps-toggle { margin-top: 10px; }
     .steps-toggle summary {
       cursor: pointer; font-size: 13px; font-weight: 500;
@@ -92,7 +83,7 @@
     }
     .steps-toggle summary:hover { color: #0284c7; }
     .steps {
-      margin-top: 10px; display: flex; flex-direction: column; gap: 8px;
+      margin-top: 10px; display: flex; flex-direction: column; gap: 6px;
     }
     .step {
       background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.4);
@@ -109,13 +100,47 @@
       background: rgba(255,255,255,0.4); padding: 6px 8px; border-radius: 6px;
       margin-top: 2px;
     }
-    .agent-tag {
-      display: inline-block; font-size: 10px; font-weight: 500;
-      background: rgba(14,165,233,0.15); color: #0284c7;
-      padding: 1px 7px; border-radius: 4px; margin-left: 6px;
+
+    /* Parallel sub-agent grid */
+    .subagent-grid {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;
+    }
+    .subagent-card {
+      flex: 1 1 240px; min-width: 200px;
+      background: rgba(255,255,255,0.2); border: 1px solid rgba(14,165,233,0.2);
+      border-radius: 10px; padding: 10px; font-size: 12px;
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    }
+    .subagent-card .header {
+      font-size: 11px; font-weight: 600; color: #0284c7;
+      text-transform: uppercase; letter-spacing: 0.3px;
+      padding: 0 0 6px 0; margin-bottom: 6px;
+      border-bottom: 1px solid rgba(14,165,233,0.15);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .subagent-card .header .status-dot {
+      width: 6px; height: 6px; border-radius: 50%; display: inline-block;
+    }
+    .subagent-card .header .status-dot.running { background: #0ea5e9; animation: pulse 1s infinite; }
+    .subagent-card .header .status-dot.done { background: #10b981; }
+    .subagent-card .header .status-dot.error { background: #ef4444; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    .subagent-card .sa-steps { display: flex; flex-direction: column; gap: 4px; }
+    .subagent-card .sa-step {
+      background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px 8px;
+      font-size: 11px; border-left: 2px solid rgba(14,165,233,0.3);
+    }
+    .subagent-card .sa-step .sa-label {
+      color: #64748b; font-size: 9px; text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .subagent-card .sa-step .sa-value { color: #1e293b; }
+    .subagent-card .sa-step .sa-value.code {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      background: rgba(255,255,255,0.3); padding: 3px 5px; border-radius: 4px;
+      margin-top: 2px; word-break: break-all;
     }
 
-    /* ── Bottom Bar ── */
     .bottom {
       background: rgba(255,255,255,0.35);
       backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
@@ -141,7 +166,6 @@
     .input-row button:hover:not(:disabled) { opacity: 0.85; }
     .input-row button:disabled { opacity: 0.35; cursor: not-allowed; }
 
-    /* ── Status ── */
     .status {
       max-width: 780px; margin: 0 auto 8px; font-size: 13px; color: #475569;
       display: flex; align-items: center; gap: 8px;
@@ -157,7 +181,6 @@
     @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
     .hidden { display: none !important; }
 
-    /* ── Workspace Lock Overlay ── */
     .ws-lock-msg {
       max-width: 780px; margin: 0 auto 8px; font-size: 13px; color: #dc2626;
       display: flex; align-items: center; gap: 6px;
@@ -188,6 +211,45 @@
       transition: color 0.15s;
     }
     .clear-btn:hover { color: #ef4444; }
+
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,0.3);
+      backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      animation: fadeIn 0.2s ease;
+    }
+    .modal {
+      background: rgba(255,255,255,0.45);
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
+      border: 1px solid rgba(255,255,255,0.6);
+      border-radius: 20px;
+      padding: 28px 32px;
+      max-width: 420px;
+      width: 90%;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+      animation: fadeIn 0.2s ease;
+    }
+    .modal h2 { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+    .modal p { font-size: 14px; color: #475569; line-height: 1.5; margin-bottom: 20px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .modal-btn {
+      padding: 9px 20px; border-radius: 10px; border: none;
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .modal-btn:hover { opacity: 0.85; }
+    .modal-btn.primary {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: #fff;
+    }
+    .modal-btn.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .modal-btn.secondary {
+      background: rgba(255,255,255,0.5);
+      border: 1px solid rgba(255,255,255,0.6);
+      color: #1e293b;
+    }
   </style>
 </head>
 <body>
@@ -219,6 +281,8 @@
     </div>
   </div>
 
+  <div id="modalContainer"></div>
+
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script>
     const chat = document.getElementById('chat');
@@ -231,138 +295,126 @@
     const wsError = document.getElementById('wsError');
     const wsLockMsg = document.getElementById('wsLockMsg');
     const clearBtn = document.getElementById('clearBtn');
+    const modalContainer = document.getElementById('modalContainer');
     let locked = false;
     let wsValid = true;
 
-    // ── History persistence ──
-    const STORAGE_KEY = 'react_chat_history';
+    const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    let saveTimer = null;
 
     function saveHistory() {
-      const messages = [];
-      chat.querySelectorAll('.message').forEach(el => {
-        const role = el.classList.contains('user') ? 'user' : 'assistant';
-        const bubble = el.querySelector('.bubble');
-        if (bubble) {
-          // For user messages, store text content
-          if (role === 'user') {
-            messages.push({ role, text: bubble.textContent });
-          } else {
-            // For assistant messages, store the answer text and step count
-            const answerEl = bubble.querySelector('.answer');
-            const text = answerEl ? answerEl.textContent : bubble.textContent;
-            messages.push({ role, text });
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        const msgs = [];
+        chat.querySelectorAll('.message').forEach(el => {
+          const role = el.classList.contains('user') ? 'user' : 'assistant';
+          const bubble = el.querySelector('.bubble');
+          if (bubble) {
+            const text = bubble.textContent.trim();
+            msgs.push({ role, html: bubble.innerHTML, text });
           }
-        }
-      });
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
-      } catch(e) {}
+        });
+        if (!msgs.length) return;
+        fetch('/api/history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: msgs, session_id: sessionId })
+        }).catch(() => {});
+      }, 800);
     }
 
     function loadHistory() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return;
-        const messages = JSON.parse(raw);
-        messages.forEach(({ role, text }) => {
-          if (role === 'user') {
-            appendMessage('user', `<div class="bubble">${escapeHtml(text)}</div>`);
-          } else if (text) {
-            const html = `<div class="bubble"><div class="answer">${renderMarkdown(text)}</div></div>`;
-            appendMessage('assistant', html);
-          }
+      fetch('/api/history').then(r => r.json()).then(data => {
+        const sessions = data.sessions || [];
+        const allMessages = [];
+        sessions.forEach(s => {
+          (s.messages || []).forEach((m, i) => {
+            allMessages.push({ ...m, sessionTimestamp: s.timestamp, msgIndex: i });
+          });
         });
-      } catch(e) {}
+        allMessages.sort((a, b) => {
+          if (a.sessionTimestamp !== b.sessionTimestamp) return a.sessionTimestamp < b.sessionTimestamp ? -1 : 1;
+          return a.msgIndex - b.msgIndex;
+        });
+        allMessages.forEach(({ role, html }) => {
+          if (html) appendMessage(role, `<div class="bubble">${html}</div>`);
+        });
+      }).catch(() => {});
     }
 
-    function clearHistory() {
-      if (!confirm('Clear all chat history?')) return;
-      chat.innerHTML = '';
-      localStorage.removeItem(STORAGE_KEY);
+    function showClearModal() {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `
+        <div class="modal">
+          <h2>Clear Session</h2>
+          <p>This clears the conversation and saves useful context into long-term memory.</p>
+          <div class="modal-actions">
+            <button class="modal-btn secondary" id="modalCancel">Cancel</button>
+            <button class="modal-btn primary" id="modalConfirm">Clear Session</button>
+          </div>
+        </div>
+      `;
+      modalContainer.appendChild(overlay);
+      document.getElementById('modalCancel').onclick = () => overlay.remove();
+      document.getElementById('modalConfirm').onclick = () => {
+        const btn = document.getElementById('modalConfirm');
+        btn.disabled = true; btn.textContent = 'Clearing...';
+        Promise.all([
+          fetch('/api/clear_session', { method: 'POST' }),
+          fetch('/api/history/clear', { method: 'POST' })
+        ]).then(() => { chat.innerHTML = ''; overlay.remove(); })
+          .catch(() => overlay.remove());
+      };
+      overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
     }
 
-    // ── Markdown ──
     function renderMarkdown(text) {
       if (!text) return '';
-      try {
-        return marked.parse(text);
-      } catch(e) {
-        return escapeHtml(text);
-      }
+      try { return marked.parse(text); } catch(e) { return escapeHtml(text); }
     }
 
-    // ── Truncate observations ──
-    function truncateObs(action, obs) {
-      if (!obs) return '';
-      if (action === 'read_file') {
-        return obs.length > 150 ? obs.substring(0, 150) + '...' : obs;
-      }
-      if (action === 'run_command') {
-        return obs.length > 300 ? obs.substring(0, 300) + '...' : obs;
-      }
-      return obs;
+    function escapeHtml(text) {
+      const d = document.createElement('div'); d.textContent = text; return d.innerHTML;
     }
 
-    // ── Workspace ──
     function setWorkspaceLock(valid) {
       wsValid = valid;
       wsLockMsg.classList.toggle('hidden', valid);
       wsInput.classList.toggle('error', !valid);
-      if (!valid) {
-        input.disabled = true;
-        sendBtn.disabled = true;
-      } else if (!locked) {
-        input.disabled = false;
-        sendBtn.disabled = false;
-      }
+      if (!valid) { input.disabled = true; sendBtn.disabled = true; }
+      else if (!locked) { input.disabled = false; sendBtn.disabled = false; }
     }
 
     function saveWorkspace() {
       const path = wsInput.value.trim();
       if (!path) return;
-      wsSaveBtn.disabled = true;
-      wsSaveBtn.textContent = '...';
-      wsError.textContent = '';
+      wsSaveBtn.disabled = true; wsSaveBtn.textContent = '...'; wsError.textContent = '';
       fetch('/api/workspace', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path })
       }).then(r => r.json()).then(data => {
-        if (data.path) {
-          wsInput.value = data.path;
-          wsError.textContent = '';
-          setWorkspaceLock(true);
-        } else if (data.error) {
-          wsError.textContent = data.error;
-          setWorkspaceLock(false);
-        }
-      }).catch(() => {
-        wsError.textContent = 'Connection error';
-        setWorkspaceLock(false);
-      }).finally(() => {
-        wsSaveBtn.disabled = false;
-        wsSaveBtn.textContent = 'Update';
-      });
+        if (data.path) { wsInput.value = data.path; wsError.textContent = ''; setWorkspaceLock(true); }
+        else if (data.error) { wsError.textContent = data.error; setWorkspaceLock(false); }
+      }).catch(() => { wsError.textContent = 'Connection error'; setWorkspaceLock(false); })
+      .finally(() => { wsSaveBtn.disabled = false; wsSaveBtn.textContent = 'Update'; });
     }
 
     fetch('/api/workspace').then(r => r.json()).then(data => {
       if (data.path) {
-        const p = data.path;
         fetch('/api/workspace', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ path: p })
-        }).then(r => r.json()).then(d => {
-          if (d.error) setWorkspaceLock(false);
-        });
+          body: JSON.stringify({ path: data.path })
+        }).then(r => r.json()).then(d => { if (d.error) setWorkspaceLock(false); });
       }
     });
 
-    wsSaveBtn.addEventListener('click', saveWorkspace);
-    wsInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveWorkspace(); });
-    clearBtn.addEventListener('click', clearHistory);
+    wsSaveBtn.onclick = saveWorkspace;
+    wsInput.onkeydown = (e) => { if (e.key === 'Enter') saveWorkspace(); };
+    clearBtn.onclick = showClearModal;
 
-    // ── Chat ──
     function appendMessage(role, html) {
       const div = document.createElement('div');
       div.className = `message ${role}`;
@@ -372,22 +424,201 @@
       return div;
     }
 
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
-
     function setLocked(lockedState) {
       locked = lockedState;
-      if (wsValid) {
-        input.disabled = lockedState;
-        sendBtn.disabled = lockedState;
-      }
+      if (wsValid) { input.disabled = lockedState; sendBtn.disabled = lockedState; }
       status.classList.toggle('hidden', !lockedState);
     }
 
-    // ── Resume (continue after pause) ──
+    function getAgentLabel(depth, agentIdx, total) {
+      if (total <= 1) return `Height ${depth}`;
+      return `Height ${depth}: Agent ${agentIdx + 1}`;
+    }
+
+    function createSubagentCard(data) {
+      const card = document.createElement('div');
+      card.className = 'subagent-card';
+      card.dataset.agentIdx = data.agent_idx;
+      card.dataset.step = data.step;
+      card.dataset.total = data.total_agents;
+      card.innerHTML = `
+        <div class="header">
+          <span class="status-dot running"></span>
+          ${getAgentLabel(data.depth, data.agent_idx, data.total_agents)}
+        </div>
+        <div class="sa-steps"></div>
+      `;
+      return card;
+    }
+
+    function getOrCreateAgentGrid(container, data) {
+      let grid = container.querySelector('.subagent-grid');
+      if (!grid) {
+        grid = document.createElement('div');
+        grid.className = 'subagent-grid';
+        grid.dataset.step = data.step;
+        container.appendChild(grid);
+      }
+      let card = grid.querySelector(`.subagent-card[data-agent-idx="${data.agent_idx}"]`);
+      if (!card) {
+        card = createSubagentCard(data);
+        grid.appendChild(card);
+      }
+      return card;
+    }
+
+    function addSubagentStep(card, sub) {
+      const stepsContainer = card.querySelector('.sa-steps');
+      const div = document.createElement('div');
+      div.className = 'sa-step';
+      div.style.animation = 'fadeIn 0.2s ease';
+      div.innerHTML = `
+        <div class="sa-label">${escapeHtml(sub.action)}</div>
+        <div class="sa-value">${escapeHtml(sub.thought)}</div>
+        ${sub.action_input ? `<div class="sa-value code">${escapeHtml(sub.action_input)}</div>` : ''}
+      `;
+      stepsContainer.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function markAgentDone(card, result) {
+      const dot = card.querySelector('.status-dot');
+      if (dot) { dot.className = 'status-dot done'; }
+      const header = card.querySelector('.header');
+      if (header) {
+        const label = header.childNodes[header.childNodes.length - 1];
+        if (label && label.textContent) {
+          header.innerHTML = `<span class="status-dot done"></span> ${label.textContent.trim()} &mdash; Done`;
+        }
+      }
+    }
+
+    function markAgentError(card, error) {
+      const dot = card.querySelector('.status-dot');
+      if (dot) { dot.className = 'status-dot error'; }
+    }
+
+    function processStreamLine(data, stepsContainer, stepIndicator, bubble) {
+      let modified = false;
+      if (data.type === 'connected') {
+        if (stepIndicator) stepIndicator.textContent = 'Connected. Processing...';
+      } else if (data.type === 'subtasks') {
+        if (data.error) {
+          if (stepIndicator) stepIndicator.textContent = 'Planning failed: ' + data.error;
+        } else {
+          if (stepIndicator) stepIndicator.textContent = `Plan: ${data.subtasks.length} subtasks`;
+        }
+      } else if (data.type === 'step') { modified = true;
+        if (stepIndicator) stepIndicator.textContent = `Running: ${data.action}`;
+        const stepDiv = document.createElement('div');
+        stepDiv.className = 'step';
+        stepDiv.style.animation = 'fadeIn 0.25s ease';
+        stepDiv.innerHTML = `
+          <div class="label">Step ${escapeHtml(data.action)}</div>
+          <div class="label" style="margin-top:6px">Thought</div>
+          <div class="value">${escapeHtml(data.thought)}</div>
+          <div class="label" style="margin-top:6px">Action Input</div>
+          <div class="value code">${escapeHtml(data.action_input)}</div>
+          <div class="label" style="margin-top:6px">Observation</div>
+          <div class="value">${escapeHtml(data.observation && data.observation.length > 200 ? data.observation.substring(0,200)+'...' : data.observation)}</div>
+        `;
+        stepsContainer.appendChild(stepDiv);
+        chat.scrollTop = chat.scrollHeight;
+      } else if (data.type === 'batch_delegation_start') { modified = true;
+        if (stepIndicator) stepIndicator.textContent = `Delegating ${data.total} tasks in parallel...`;
+        const stepDiv = document.createElement('div');
+        stepDiv.className = 'step';
+        stepDiv.style.animation = 'fadeIn 0.25s ease';
+        stepDiv.innerHTML = `<div class="label">batch_delegate &mdash; ${data.total} parallel agents</div><div class="value">${escapeHtml(data.thought)}</div>`;
+        stepsContainer.appendChild(stepDiv);
+        chat.scrollTop = chat.scrollHeight;
+      } else if (data.type === 'subagent_step') { modified = true;
+        if (data.total_agents > 1) {
+          const card = getOrCreateAgentGrid(stepsContainer, data);
+          addSubagentStep(card, data.sub_step);
+        } else {
+          let saContainer = stepsContainer.querySelector(`.subagent-steps[data-step="${data.step}"]`);
+          if (!saContainer) {
+            saContainer = document.createElement('div');
+            saContainer.className = 'subagent-steps';
+            saContainer.dataset.step = data.step;
+            stepsContainer.appendChild(saContainer);
+          }
+          const div = document.createElement('div');
+          div.className = 'subagent-step';
+          div.style.animation = 'fadeIn 0.2s ease';
+          div.innerHTML = `<div class="label">Sub-agent (depth ${data.depth}) &mdash; ${escapeHtml(data.sub_step.action)}</div><div class="value">${escapeHtml(data.sub_step.thought)}</div>`;
+          saContainer.appendChild(div);
+        }
+        chat.scrollTop = chat.scrollHeight;
+      } else if (data.type === 'subagent_done') { modified = true;
+        if (data.total_agents > 1) {
+          const card = stepsContainer.querySelector(`.subagent-card[data-agent-idx="${data.agent_idx}"]`);
+          if (card) markAgentDone(card, data.result);
+        }
+        if (stepIndicator) stepIndicator.textContent = `Agent ${data.agent_idx + 1}/${data.total_agents} completed`;
+      } else if (data.type === 'subagent_error') { modified = true;
+        const card = stepsContainer.querySelector(`.subagent-card[data-agent-idx="${data.agent_idx}"]`);
+        if (card) markAgentError(card, data.error);
+      } else if (data.type === 'batch_delegation_end') {
+        if (stepIndicator) stepIndicator.textContent = 'All parallel agents completed';
+      } else if (data.type === 'delegation_start') {
+        if (stepIndicator) stepIndicator.textContent = `Delegating: ${(data.task || '').substring(0, 60)}...`;
+      } else if (data.type === 'delegation_end') {
+        if (stepIndicator) stepIndicator.textContent = 'Delegation complete';
+      } else if (data.type === 'paused') { modified = true;
+        if (bubble) {
+          const statusEl = bubble.querySelector('.status');
+          if (statusEl) statusEl.remove();
+        }
+        if (stepIndicator) stepIndicator.textContent = 'Step limit reached.';
+        const pauseNote = document.createElement('div');
+        pauseNote.style.cssText = 'margin:8px 0;font-size:13px;color:#64748b;';
+        pauseNote.textContent = 'Reached step limit. Continue?';
+        stepsContainer.appendChild(pauseNote);
+        const continueBtn = document.createElement('button');
+        continueBtn.textContent = 'Continue';
+        continueBtn.className = 'ws-btn';
+        continueBtn.style.marginTop = '4px';
+        continueBtn.onclick = () => {
+          continueBtn.disabled = true;
+          const spin = document.createElement('span');
+          spin.className = 'spinner';
+          spin.style.cssText = 'width:12px;height:12px;display:inline-block;margin-right:6px;margin-left:-6px';
+          continueBtn.textContent = '';
+          continueBtn.appendChild(spin);
+          continueBtn.appendChild(document.createTextNode(' Continuing...'));
+          fetchResume(data.resume_context, bubble, stepsContainer, stepIndicator);
+        };
+        stepsContainer.appendChild(continueBtn);
+        chat.scrollTop = chat.scrollHeight;
+      } else if (data.type === 'done') {
+        if (bubble) {
+          const statusEl = bubble.querySelector('.status');
+          if (statusEl) statusEl.remove();
+        }
+        const existingBtn = stepsContainer.querySelector('button');
+        if (existingBtn) existingBtn.remove();
+        const answerEl = document.createElement('div');
+        answerEl.className = 'answer';
+        answerEl.innerHTML = renderMarkdown(data.final_answer || '');
+        if (bubble) bubble.insertBefore(answerEl, stepsContainer);
+        const totalSteps = stepsContainer.querySelectorAll('.step').length + stepsContainer.querySelectorAll('.subagent-card').length;
+        if (totalSteps) {
+          const details = document.createElement('details');
+          details.className = 'steps-toggle';
+          const summary = document.createElement('summary');
+          summary.textContent = `View Agent Reasoning (${totalSteps} steps)`;
+          details.appendChild(summary);
+          while (stepsContainer.firstChild) details.appendChild(stepsContainer.firstChild);
+          if (bubble) bubble.appendChild(details);
+          stepsContainer.remove();
+        }
+        saveHistory();
+      }
+      if (modified) saveHistory();
+    }
+
     function fetchResume(resumeContext, bubble, stepsContainer, stepIndicator) {
       fetch('/api/chat', {
         method: 'POST',
@@ -398,8 +629,6 @@
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
-        let prevCount = stepsContainer.querySelectorAll('.step').length;
-
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -408,83 +637,22 @@
           buffer = lines.pop() || '';
           for (const line of lines) {
             if (!line.startsWith('data: ')) continue;
-            const data = JSON.parse(line.slice(6));
-            if (data.type === 'step') {
-              stepIndicator.textContent = `Running: ${data.action}`;
-              prevCount++;
-              const stepDiv = document.createElement('div');
-              stepDiv.className = 'step';
-              stepDiv.style.animation = 'fadeIn 0.25s ease';
-              stepDiv.innerHTML = `
-                <div class="label">Step ${prevCount} &mdash; ${escapeHtml(data.action)}</div>
-                <div class="label" style="margin-top:6px">Thought</div>
-                <div class="value">${escapeHtml(data.thought)}</div>
-                <div class="label" style="margin-top:6px">Action Input</div>
-                <div class="value code">${escapeHtml(data.action_input)}</div>
-                <div class="label" style="margin-top:6px">Observation</div>
-                <div class="value">${escapeHtml(truncateObs(data.action, data.observation))}</div>
-              `;
-              stepsContainer.appendChild(stepDiv);
-              chat.scrollTop = chat.scrollHeight;
-            } else if (data.type === 'paused') {
-              // Another pause — replace continue button
-              const oldBtn = stepsContainer.querySelector('button');
-              if (oldBtn) oldBtn.remove();
-              const pauseNote = document.createElement('div');
-              pauseNote.style.cssText = 'margin:8px 0;font-size:13px;color:#64748b;';
-              pauseNote.textContent = 'Reached step limit again. Continue?';
-              stepsContainer.appendChild(pauseNote);
-              const newBtn = document.createElement('button');
-              newBtn.textContent = 'Continue';
-              newBtn.className = 'ws-btn';
-              newBtn.style.marginTop = '4px';
-              newBtn.addEventListener('click', () => {
-                newBtn.disabled = true;
-                newBtn.textContent = 'Continuing...';
-                fetchResume(data.resume_context, bubble, stepsContainer, stepIndicator);
-              });
-              stepsContainer.appendChild(newBtn);
-              chat.scrollTop = chat.scrollHeight;
-            } else if (data.type === 'done') {
-              const statusEl = bubble.querySelector('.status');
-              if (statusEl) statusEl.remove();
-              // Remove any continue button/pause note
-              const btn = stepsContainer.querySelector('button');
-              if (btn) btn.remove();
-              const notes = stepsContainer.querySelectorAll('div');
-              notes.forEach(n => { if (n.textContent.includes('Continue')) n.remove(); });
-
-              const answerEl = document.createElement('div');
-              answerEl.className = 'answer';
-              answerEl.innerHTML = renderMarkdown(data.final_answer || '');
-              bubble.insertBefore(answerEl, stepsContainer);
-
-              const totalSteps = stepsContainer.querySelectorAll('.step').length;
-              if (totalSteps) {
-                const details = document.createElement('details');
-                details.className = 'steps-toggle';
-                const summary = document.createElement('summary');
-                summary.textContent = `View Agent Reasoning (${totalSteps} steps)`;
-                details.appendChild(summary);
-                while (stepsContainer.firstChild) {
-                  details.appendChild(stepsContainer.firstChild);
-                }
-                bubble.appendChild(details);
-                stepsContainer.remove();
-              }
-              saveHistory();
-            }
+            try { processStreamLine(JSON.parse(line.slice(6)), stepsContainer, stepIndicator, bubble); } catch(e) {}
           }
         }
       }).catch((err) => {
         const errEl = document.createElement('div');
         errEl.style.cssText = 'color:#dc2626;margin-top:8px;font-size:13px;';
-        errEl.textContent = 'Continue error: ' + err.message;
+        const errMsg = err.message.toLowerCase();
+        if (errMsg.includes('network') || errMsg.includes('fetch')) {
+          errEl.textContent = 'Continue error: Connection lost. The LLM may still be generating.';
+        } else {
+          errEl.textContent = 'Continue error: ' + err.message;
+        }
         stepsContainer.appendChild(errEl);
       });
     }
 
-    // ── Send ──
     function handleSend() {
       const prompt = input.value.trim();
       if (!prompt || locked || !wsValid) return;
@@ -496,7 +664,7 @@
       appendMessage('user', `<div class="bubble">${escapeHtml(prompt)}</div>`);
       saveHistory();
 
-      const assistantDiv = appendMessage('assistant', `
+      appendMessage('assistant', `
         <div class="bubble" id="assistantBubble">
           <div class="steps" id="stepsContainer"></div>
           <div class="status" style="margin:0;padding:0;color:#475569;">
@@ -509,124 +677,41 @@
       const bubble = document.getElementById('assistantBubble');
       const stepsContainer = document.getElementById('stepsContainer');
       const stepIndicator = document.getElementById('stepIndicator');
-      let stepCount = 0;
-
-      function addStepCard(data) {
-        stepCount++;
-        const stepDiv = document.createElement('div');
-        stepDiv.className = 'step';
-        stepDiv.style.animation = 'fadeIn 0.25s ease';
-        stepDiv.innerHTML = `
-          <div class="label">Step ${stepCount} &mdash; ${escapeHtml(data.action)}</div>
-          <div class="label" style="margin-top:6px">Thought</div>
-          <div class="value">${escapeHtml(data.thought)}</div>
-          <div class="label" style="margin-top:6px">Action Input</div>
-          <div class="value code">${escapeHtml(data.action_input)}</div>
-          <div class="label" style="margin-top:6px">Observation</div>
-          <div class="value">${escapeHtml(truncateObs(data.action, data.observation))}</div>
-        `;
-        stepsContainer.appendChild(stepDiv);
-        chat.scrollTop = chat.scrollHeight;
-      }
 
       fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt })
       }).then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`Server error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Server error: ${response.status}`);
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
-        let finalAnswer = '';
-
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
-
           const lines = buffer.split('\n');
           buffer = lines.pop() || '';
-
           for (const line of lines) {
             if (!line.startsWith('data: ')) continue;
-            const data = JSON.parse(line.slice(6));
-
-            if (data.type === 'step') {
-              stepIndicator.textContent = `Running: ${data.action}`;
-              addStepCard(data);
-            } else if (data.type === 'paused') {
-              const statusEl = bubble.querySelector('.status');
-              if (statusEl) statusEl.remove();
-
-              // Remove spinner, show continue button
-              stepIndicator.textContent = 'Step limit reached.';
-              const pauseNote = document.createElement('div');
-              pauseNote.style.cssText = 'margin:8px 0;font-size:13px;color:#64748b;';
-              pauseNote.textContent = 'Reached step limit. Continue?';
-              stepsContainer.appendChild(pauseNote);
-
-              const continueBtn = document.createElement('button');
-              continueBtn.textContent = 'Continue';
-              continueBtn.className = 'ws-btn';
-              continueBtn.style.marginTop = '4px';
-              continueBtn.addEventListener('click', () => {
-                continueBtn.disabled = true;
-                continueBtn.textContent = 'Continuing...';
-                // Add spinner back
-                const spin = document.createElement('span');
-                spin.className = 'spinner';
-                spin.style.cssText = 'width:12px;height:12px;display:inline-block;margin-right:6px;';
-                continueBtn.textContent = '';
-                continueBtn.appendChild(spin);
-                continueBtn.appendChild(document.createTextNode(' Continuing...'));
-
-                fetchResume(data.resume_context, bubble, stepsContainer, stepIndicator);
-              });
-              stepsContainer.appendChild(continueBtn);
-              chat.scrollTop = chat.scrollHeight;
-            } else if (data.type === 'done') {
-              finalAnswer = data.final_answer || '';
-
-              const statusEl = bubble.querySelector('.status');
-              if (statusEl) statusEl.remove();
-
-              const answerEl = document.createElement('div');
-              answerEl.className = 'answer';
-              answerEl.innerHTML = renderMarkdown(finalAnswer);
-              bubble.insertBefore(answerEl, stepsContainer);
-
-              const stepsInContainer = stepsContainer.children.length;
-              if (stepsInContainer) {
-                const details = document.createElement('details');
-                details.className = 'steps-toggle';
-                const summary = document.createElement('summary');
-                summary.textContent = `View Agent Reasoning (${stepsInContainer} steps)`;
-                details.appendChild(summary);
-                while (stepsContainer.firstChild) {
-                  details.appendChild(stepsContainer.firstChild);
-                }
-                bubble.appendChild(details);
-                stepsContainer.remove();
-              }
-              saveHistory();
-            }
+            try { processStreamLine(JSON.parse(line.slice(6)), stepsContainer, stepIndicator, bubble); } catch(e) {}
           }
         }
       }).catch((err) => {
-        bubble.innerHTML = `<div class="bubble"><div style="color:#dc2626;">Error: ${err.message}</div></div>`;
-      }).finally(() => {
-        setLocked(false);
-      });
+        const errMsg = err.message.toLowerCase();
+        if (errMsg.includes('network') || errMsg.includes('fetch')) {
+          bubble.innerHTML = `<div class="bubble"><div style="color:#dc2626;">Connection lost. The LLM is still generating — check the server console or logs for progress. Error: ${escapeHtml(err.message)}</div></div>`;
+        } else {
+          bubble.innerHTML = `<div class="bubble"><div style="color:#dc2626;">Error: ${escapeHtml(err.message)}</div></div>`;
+        }
+      }).finally(() => { setLocked(false); });
     }
 
-    // Load saved history on startup
     loadHistory();
 
-    sendBtn.addEventListener('click', handleSend);
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSend(); });
+    sendBtn.onclick = handleSend;
+    input.onkeydown = (e) => { if (e.key === 'Enter') handleSend(); };
   </script>
 </body>
 </html>

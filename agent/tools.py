@@ -173,6 +173,27 @@ def list_files(path="."):
         return f"List Error: {e}"
 
 
+def list_files_recursive(path="."):
+    try:
+        full_path, allowed = _resolve_path(path)
+        if not allowed:
+            return "Error: Path is outside the workspace."
+        if not full_path.exists():
+            return f"Error: Path not found: {path}"
+        items = []
+        for root, dirs, files in os.walk(str(full_path)):
+            rel = os.path.relpath(root, str(_WORKSPACE_ROOT))
+            if rel == ".":
+                rel = ""
+            for d in sorted(dirs):
+                items.append(f"[DIR] {os.path.join(rel, d)}")
+            for f in sorted(files):
+                items.append(f"[FILE] {os.path.join(rel, f)}")
+        return "\n".join(items)
+    except Exception as e:
+        return f"ListRecursive Error: {e}"
+
+
 def run_command(command):
     try:
         result = _subprocess.run(
@@ -196,32 +217,10 @@ def run_command(command):
     except Exception as e:
         return f"Command Error: {e}"
 
-def list_files(path="."):
-    try:
-        full_path = (_WORKSPACE_ROOT / path).resolve()
-
-        if not str(full_path).startswith(str(_WORKSPACE_ROOT)):
-            return "Error: Path is outside workspace."
-
-        if not full_path.exists():
-            return f"Error: Path not found: {path}"
-
-        items = []
-
-        for item in sorted(full_path.iterdir()):
-            if item.is_dir():
-                items.append(f"[DIR] {item.name}")
-            else:
-                items.append(f"[FILE] {item.name}")
-
-        return "\n".join(items)
-
-    except Exception as e:
-        return f"List Error: {e}"
-
 TOOLS = {
      "web_search": web_search,
      "list_files": list_files,
+     "list_files_recursive": list_files_recursive,
      "read_file": read_file,
      "read_file_partial": read_file_partial,
      "write_file": write_file,
