@@ -10,7 +10,6 @@ def _env_context():
 Environment: {system} ({arch})
 Use these commands for run_command: {cmd}
 """
-"""
 
 
 BASE_SYSTEM_PROMPT = """You are a ReAct Agent. You have tools to read/write files, run commands, and search the web.
