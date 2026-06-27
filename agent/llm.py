@@ -1,7 +1,10 @@
 import json
 import threading
 import time
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 _llm_lock = threading.Lock()
 
 
@@ -16,9 +19,10 @@ def call_llm(prompt: str, structured: bool = False) -> str:
         "num_ctx": 65536,
     }
 
+    MODEL_NAME = os.getenv("OLLAMA_MODEL", "minimax-m2.5:cloud")
     def _do_call():
         response = client.chat(
-            model='qwen3.6',
+            model=MODEL_NAME,
             messages=[
                 {'role': 'user', 'content': prompt}
             ],

@@ -10,23 +10,59 @@ class TaskPlanner:
         self.enable_replanning = enable_replanning
 
     def decompose_task(self, query: str) -> list[str]:
-        prompt = f"""You are a task planner.
+        prompt = f"""You are an expert task planner for a ReAct AI agent.
 
-Break the user request into a minimal ordered list of executable subtasks.
+Your job is to break the user's request into the SMALLEST NUMBER of meaningful executable subtasks.
 
 Rules:
 
-Output only numbered tasks.
-One task per line.
-No explanations.
-Keep the number of subtasks as small as possible.
+1. Output ONLY numbered tasks.
+2. One task per line.
+3. Prefer module-level subtasks instead of file-level subtasks.
+4. Never create one subtask per file unless absolutely necessary.
+5. Group related work together.
+6. If several files belong to one logical component, create ONE subtask for that component.
+7. Independent components should become separate subtasks because they may execute in parallel.
+8. Dependent work should remain sequential.
+9. Prefer 3–6 subtasks for large projects.
+10. Prefer a single task for simple questions.
+
+Examples:
+
+User:
+Explain this Python repository.
+
+Good:
+
+1. Analyze the backend architecture.
+2. Analyze the frontend architecture.
+3. Analyze configuration and entry points.
+4. Produce the final explanation.
+
+Bad:
+
+1. Read app.py
+2. Read core.py
+3. Read llm.py
+4. Read parser.py
+5. Read prompts.py
+6. Read tools.py
 
 User Request:
-{query}"""
+{query}
+"""
 
         output = self._call_llm(prompt)
         tasks = self._parse_numbered_list(output)
-        return tasks if tasks else [query]
+
+        if not tasks:
+            return [query]
+
+        # Prevent over-decomposition
+        if len(tasks) > 6:
+            tasks = tasks[:6]
+
+        return tasks
 
     def execute_plan(self, query: str) -> str:
         if self.agent is None:

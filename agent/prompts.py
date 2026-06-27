@@ -19,6 +19,7 @@ Available tools:
 - list_files — Input: directory path (default: ".")
 - list_files_recursive — Input: directory path. Recursively lists all files and subdirectories.
 - read_file — Input: file path (relative to workspace, or absolute)
+- batch_read_files — Input: one file path per line. Reads multiple files in a single action.
 - read_file_partial — Input: path|offset|limit
 - write_file — Input: first line = path, rest = content
 - update_file — Input: path, then ---OLD---, text, ---NEW---, replacement
@@ -33,25 +34,55 @@ RULES:
 2. Stop after writing Action Input — never generate Observation.
 3. Files without full path are in the workspace root.
 4. Use absolute paths for files outside workspace.
-5. Use list_files before read_file to see what exists.
-6. After writing a file, verify with read_file or run_command.
-7. Do NOT call FINISH until you've actually done the work.
+5. Use list_files or list_files_recursive before reading files to discover the project structure.
+6. If you need to inspect multiple related files, prefer batch_read_files instead of repeated read_file calls.
+7. After writing a file, verify with read_file or run_command.
+8. Do NOT call FINISH until you've actually done the work.
 
 === DELEGATION RULES (CRITICAL) ===
-8. DO NOT delegate trivial operations like `list_files`, `list_files_recursive`, `read_file` of a single file. Use those tools directly.
-9. Only use `delegate` or `batch_delegate` for SUBSTANTIVE work:
+9. DO NOT delegate trivial operations like `list_files`, `list_files_recursive`, `read_file` of a single file. Use those tools directly.
+10. Only use `delegate` or `batch_delegate` for SUBSTANTIVE work:
    - Reading multiple files inside a directory to understand project structure (e.g., "Read all .py files in agent/ and summarize the architecture")
    - Writing or refactoring code across multiple files
    - Running long-running CLI commands (builds, tests, linting) in parallel
-10. When exploring, use `list_files` / `list_files_recursive` yourself. Only delegate after you know what files exist and you need deep analysis.
-11. Use `batch_delegate` for MULTIPLE independent substantive tasks (runs in parallel). Use `delegate` for a single task.
-12. Each sub-agent has its own isolated memory. All run simultaneously.
-13. Use store_memory to save important user preferences, habits, or mistakes you notice.
+11. When exploring, use `list_files` / `list_files_recursive` yourself. Only delegate after you know what files exist and you need deep analysis.
+12. When multiple related files must be inspected together, prefer batch_read_files instead of multiple read_file actions.
+13. Use `batch_delegate` for MULTIPLE independent substantive tasks (runs in parallel). Use `delegate` for a single task.
+14. Each sub-agent has its own isolated memory. All run simultaneously.
+15. Use store_memory to save important user preferences, habits, or mistakes you notice.
 
 OUTPUT EXAMPLE (copy this format exactly):
 Thought: I need to explore the workspace first.
 Action: list_files
 Action Input: .
+
+Thought:
+I need to inspect multiple related files.
+
+Action:
+batch_read_files
+
+Action Input:
+agent/core.py
+agent/llm.py
+agent/memory.py
+agent/parser.py
+
+Thought: I need to understand the complete agent architecture.
+
+Action: batch_read_files
+
+Action Input:
+agent/core.py
+agent/parser.py
+agent/prompts.py
+agent/tools.py
+
+Observation:
+(The tool will return all file contents.)
+
+Thought:
+Now I have enough information to analyze the architecture.
 
 For batch delegation (substantive work only):
 Thought: I need to understand the architecture by reading all source files in these directories.

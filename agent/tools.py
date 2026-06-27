@@ -2,10 +2,20 @@ import json
 import os
 import subprocess as _subprocess
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 
 from ddgs import DDGS
 
 _WORKSPACE_ROOT = Path(__file__).resolve().parent.parent
+
+# ---------------- FILE CACHE ----------------
+
+_FILE_CACHE = {}
+
+def clear_file_cache():
+    _FILE_CACHE.clear()
+
+# --------------------------------------------
 
 
 def get_workspace():
@@ -16,6 +26,7 @@ def set_workspace(path):
     global _WORKSPACE_ROOT
     new_path = Path(path).resolve()
     _WORKSPACE_ROOT = new_path
+    clear_file_cache()
     if not new_path.exists():
         return f"Error: Path does not exist: {path}"
     return get_workspace()
@@ -46,16 +57,63 @@ def _resolve_path(path):
 def read_file(path):
     try:
         full_path, allowed = _resolve_path(path)
+        cache_key = str(full_path.resolve())
+
+        if cache_key in _FILE_CACHE:
+            return _FILE_CACHE[cache_key]
         if not allowed:
             return "Error: Path is outside the workspace."
         if not full_path.exists():
             return f"Error: File not found: {path}"
         if not full_path.is_file():
             return f"Error: Not a file: {path}"
-        return full_path.read_text(encoding="utf-8")
+        content = full_path.read_text(encoding="utf-8")
+        _FILE_CACHE[cache_key] = content
+        return content
     except Exception as e:
         return f"Read Error: {e}"
 
+def batch_read_files(raw_input):
+    """
+    Input:
+        one file path per line
+
+    Output:
+        concatenated contents
+    """
+
+    paths = [
+        p.strip()
+        for p in raw_input.splitlines()
+        if p.strip()
+    ]
+
+    if not paths:
+        return "Error: No file paths provided."
+
+    def _read(path):
+        return path, read_file(path)
+
+    with ThreadPoolExecutor(
+            max_workers=min(4, len(paths))
+    ) as executor:
+
+        results = list(
+            executor.map(_read, paths)
+        )
+
+    outputs = []
+
+    for path, result in results:
+
+        outputs.append(
+            f"\n{'='*25}\n"
+            f"{path}\n"
+            f"{'='*25}\n"
+            f"{result}"
+        )
+
+    return "\n".join(outputs)
 
 def read_file_partial(path, offset=0, limit=None):
     try:
@@ -65,13 +123,19 @@ def read_file_partial(path, offset=0, limit=None):
             offset = int(parts[1].strip()) if len(parts) > 1 and parts[1].strip() else 0
             limit = int(parts[2].strip()) if len(parts) > 2 and parts[2].strip() else None
         full_path, allowed = _resolve_path(path)
+        cache_key = str(full_path.resolve())
         if not allowed:
             return "Error: Path is outside the workspace."
         if not full_path.exists():
             return f"Error: File not found: {path}"
         if not full_path.is_file():
             return f"Error: Not a file: {path}"
-        lines = full_path.read_text(encoding="utf-8").splitlines(keepends=True)
+        if cache_key not in _FILE_CACHE:
+            _FILE_CACHE[cache_key] = full_path.read_text(
+                encoding="utf-8"
+            )
+
+        lines = _FILE_CACHE[cache_key].splitlines(keepends=True)
         total = len(lines)
         if offset < 0:
             offset = 0
@@ -111,6 +175,7 @@ def write_file(raw_input):
             return "Error: Path is outside the workspace."
         full_path.parent.mkdir(parents=True, exist_ok=True)
         full_path.write_text(content, encoding="utf-8")
+        _FILE_CACHE[str(full_path.resolve())] = content
         return f"Successfully wrote {len(content)} bytes to {path}"
     except Exception as e:
         return f"Write Error: {e}"
@@ -150,6 +215,7 @@ def update_file(raw_input):
             return f"Error: Found {count} matches for old_string in {path}. Provide more context to identify the correct match."
         new_content = content.replace(old_string, new_string, 1)
         full_path.write_text(new_content, encoding="utf-8")
+        _FILE_CACHE[str(full_path.resolve())] = new_content
         return f"Successfully updated {path} ({len(new_content)} bytes written)"
     except Exception as e:
         return f"Update Error: {e}"
@@ -222,6 +288,7 @@ TOOLS = {
      "list_files": list_files,
      "list_files_recursive": list_files_recursive,
      "read_file": read_file,
+     "batch_read_files": batch_read_files,
      "read_file_partial": read_file_partial,
      "write_file": write_file,
      "update_file": update_file,

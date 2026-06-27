@@ -19,8 +19,27 @@ def _env_context():
     return f"Environment: {system} ({arch})\nCommands: {cmd}"
 
 
-SUB_AGENT_PROMPT_TEMPLATE = """You are an AI assistant with access to the user's local machine.
+SUB_AGENT_PROMPT_TEMPLATE = """You are a specialized ReAct sub-agent.
 
+Your goal is to solve ONE assigned task efficiently while preserving complete reasoning.
+
+Before choosing your first action, classify the task.
+
+If the task is about:
+- understanding a codebase,
+- summarizing a directory,
+- explaining architecture,
+- reviewing multiple related files,
+
+then prefer batch_read_files instead of repeated read_file calls.
+
+If the task requires discovering an unknown project structure,
+use list_files_recursive once before reading files.
+
+Avoid repeating the same tool unless new information is expected.
+
+Always preserve the ReAct cycle:
+Thought → Action → Observation.
 {env}
 
 Tools:
@@ -41,21 +60,71 @@ Rules:
 3. Files without full path are in the workspace root.
 4. Use absolute paths for files outside workspace.
 5. Do NOT call FINISH until you've verified your work.
+6. When multiple related files are needed, use batch_read_files.
+7. Avoid repeated read_file calls.
+8. Avoid repeated list_files calls after list_files_recursive has already been used.
+9. Use the minimum number of tool invocations required to complete the assigned task.
+10. Do not inspect files unrelated to the assigned task.
 
-Example:
-Thought: I should list the workspace files first.
-Action: run_command
-Action Input: dir
+Example 1
 
+Thought:
+I need to understand the agent architecture.
+
+Action:
+batch_read_files
+
+Action Input:
+agent/core.py
+agent/llm.py
+agent/parser.py
+agent/prompts.py
+
+---
+
+Example 2
+
+Thought:
+I don't know the project structure yet.
+
+Action:
+list_files_recursive
+
+Action Input:
+.
 Always use exactly: Thought:  Action:  Action Input:"""
 
 
 def get_sub_agent_prompt(task, depth=1):
     env = _env_context()
-    return SUB_AGENT_PROMPT_TEMPLATE.format(env=env) + "\n\nYour task:\n" + task + "\n\nStart with one Thought and one Action."
+    return (
+        SUB_AGENT_PROMPT_TEMPLATE.format(env=env)
+        + """
 
+    Planning Strategy:
 
-_SUBAGENT_MAX_STEPS = 200
+    1. Decide whether the task is exploration or analysis.
+
+    2. Exploration
+        → list_files_recursive
+
+    3. Analysis
+        → batch_read_files
+
+    4. Modification
+        → read_file
+            update_file
+            verify
+
+    Prefer one powerful action over many small actions.
+
+    """
+        + "\n\nYour task:\n"
+        + task
+        + "\n\nStart with one Thought and one Action."
+    )
+
+_SUBAGENT_MAX_STEPS = 80
 
 
 def run_subagent(task, depth=1, max_steps=_SUBAGENT_MAX_STEPS):
@@ -72,7 +141,10 @@ def run_subagent_stream(task, depth=1, max_steps=_SUBAGENT_MAX_STEPS):
     system_prompt = get_sub_agent_prompt(task, depth)
 
     for step_num in range(max_steps):
-        prompt = system_prompt + "\n\n" + scratchpad
+        if step_num == 0:
+            prompt = system_prompt
+        else:
+            prompt = system_prompt + "\n\n" + scratchpad
 
         output = call_llm(prompt)
         _debug(f"[subagent depth={depth}] LLM output: " + output[:500])
