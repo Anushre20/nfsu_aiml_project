@@ -54,9 +54,10 @@ class Memory:
             [f"{entry['role']}: {entry['content']}" for entry in self.short_term]
         )
 
-    def add_long_term(self, key, value):
+    def add_long_term(self, key, value, agent="System"):
         items = _load_long_term()
         items.append({
+            "agent": agent,
             "key": key,
             "value": value,
             "timestamp": datetime.now().isoformat()

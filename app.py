@@ -11,6 +11,7 @@ from agent.core import stream_agent, run_agent, memory as agent_memory
 from agent.task_planner import TaskPlanner
 from agent.llm import call_llm
 from agent.tools import get_workspace, set_workspace
+from agent.coordinator import Coordinator
 
 
 _HISTORY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "agent")
@@ -39,6 +40,7 @@ class PlannerLLM:
 
 
 planner = TaskPlanner(agent=None, llm=PlannerLLM())
+coordinator = Coordinator()
 
 app = Flask(__name__)
 
@@ -218,6 +220,39 @@ def chat():
         "Connection": "keep-alive",
     })
 
+@app.route("/api/chat_multi", methods=["POST"])
+def chat_multi():
+
+    data = request.get_json()
+
+    prompt = data.get("prompt", "").strip()
+
+    if not prompt:
+        return jsonify(
+            {
+                "error": "Prompt is required"
+            }
+        ), 400
+
+    try:
+
+        answer = coordinator.run(prompt)
+
+        return jsonify({
+
+            "mode": "multi",
+
+            "answer": answer
+
+        })
+
+    except Exception as e:
+
+        return jsonify({
+
+            "error": str(e)
+
+        }), 500
 
 if __name__ == "__main__":
     app.run(debug=True, threaded=True, port=5000)
