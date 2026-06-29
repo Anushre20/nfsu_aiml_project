@@ -37,9 +37,11 @@ def _save_long_term(items):
 class Memory:
 
     MAX_SHORT_TERM = 500
+    MAX_OBSERVATIONS = 10
 
     def __init__(self):
         self.short_term = []
+        self._observations = []
 
     def add_short_term(self, role, content):
         self.short_term.append({"role": role, "content": content, "timestamp": datetime.now().isoformat()})
@@ -90,15 +92,39 @@ class Memory:
     def clear_long_term(self):
         _save_long_term([])
 
+    def add_observation(self, action, summary):
+        self._observations.append({
+            "action": action,
+            "summary": summary[:500],
+            "timestamp": datetime.now().isoformat()
+        })
+        if len(self._observations) > self.MAX_OBSERVATIONS:
+            self._observations.pop(0)
+
+    def get_observations_text(self, k=5):
+        recent = self._observations[-k:]
+        if not recent:
+            return ""
+        lines = []
+        for obs in recent:
+            lines.append(f"[{obs['action']}]: {obs['summary']}")
+        return "\n".join(lines)
+
+    def _pre_question_short_term(self, before_idx):
+        return self.short_term[:before_idx]
+
     def reset_short_term(self):
         self.short_term.clear()
+        self._observations.clear()
 
     def reset(self):
         self.short_term.clear()
+        self._observations.clear()
         self.clear_long_term()
 
     def memory_stats(self):
         return {
             "short_term_turns": len(self.short_term),
+            "observations": len(self._observations),
             "long_term_docs": len(_load_long_term()),
         }

@@ -67,10 +67,16 @@ def _agent_step(question, subtasks, scratchpad):
     else:
         knowledge_block = ""
 
+    obs_text = memory.get_observations_text(k=5)
+    if obs_text:
+        obs_block = f"\n\nPrevious Observations:\n{obs_text}"
+    else:
+        obs_block = ""
+
     system_prompt = build_system_prompt(subtasks)
     scratchpad = _format_scratchpad(scratchpad)
 
-    prompt = system_prompt + "\n\n" + knowledge_block + "\n\nQuestion:\n" + question + "\n\n" + scratchpad
+    prompt = system_prompt + "\n\n" + knowledge_block + obs_block + "\n\nQuestion:\n" + question + "\n\n" + scratchpad
 
     llm_output = call_llm(prompt)
 
@@ -129,6 +135,8 @@ def _agent_step(question, subtasks, scratchpad):
     tool_result = TOOLS[action](parsed["action_input"])
     if DEBUG:
         _debug("TOOL RESULT=" + str(tool_result))
+
+    memory.add_observation(action, _truncate_obs(str(tool_result), 400))
 
     step_entry = f"Thought: {parsed['thought']}\nAction: {action}\nAction Input: {parsed['action_input']}\nObservation: {_truncate_obs(str(tool_result))}"
     if DEBUG:
