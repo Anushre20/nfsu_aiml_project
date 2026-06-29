@@ -70,10 +70,36 @@ def _agent_step(question, subtasks, scratchpad):
         return action, parsed, None, None, scratchpad, None
 
     if action == "store_memory":
-        memory.add_long_term(parsed.get("action_input", ""), parsed.get("action_input_extra", ""))
+
+        stored = memory.add_long_term(
+            parsed.get("action_input", ""),
+            parsed.get("action_input_extra", "")
+        )
+
+    if stored:
         result = "Information stored in long-term memory."
-        step_entry = f"Thought: {parsed['thought']}\nAction: store_memory\nAction Input: {parsed['action_input']}\nObservation: {result}"
-        return action, parsed, result, step_entry, scratchpad + "\n" + step_entry, None
+
+    elif not parsed.get("action_input_extra", "").strip():
+        result = "Memory rejected: both key and value are required."
+
+    else:
+        result = "Memory already exists. Skipped duplicate."
+
+        step_entry = (
+            f"Thought: {parsed['thought']}\n"
+            f"Action: store_memory\n"
+            f"Action Input: {parsed['action_input']}\n"
+            f"Observation: {result}"
+        )
+
+        return (
+            action,
+            parsed,
+            result,
+            step_entry,
+            scratchpad + "\n" + step_entry,
+            None,
+        )
 
     if action == "batch_delegate":
         raw = parsed.get("action_input", "")

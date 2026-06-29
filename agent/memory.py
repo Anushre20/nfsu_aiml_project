@@ -55,14 +55,91 @@ class Memory:
         )
 
     def add_long_term(self, key, value, agent="System"):
+
+        key = str(key).strip()
+        value = str(value).strip()
+
+        # ---------- Memory Normalization ----------
+
+        # If the LLM produced only one sentence,
+        # automatically infer key/value.
+
+        if key and not value:
+
+            sentence = key
+
+            words = sentence.split()
+
+            if words:
+
+                stop_words = {
+                    "remember",
+                    "that",
+                    "the",
+                    "a",
+                    "an",
+                    "user",
+                    "my",
+                }
+
+                for word in words:
+
+                    cleaned = word.strip(".,:;()")
+
+                    if cleaned.lower() not in stop_words:
+
+                        key = cleaned
+
+                        break
+
+                value = sentence
+
+        # Final validation
+
+        key = key.strip()
+        value = value.strip()
+
+        if not key or not value:
+            return False
+        bad_keys = {
+
+            "remember",
+
+            "that",
+
+            "this",
+
+            "it",
+
+            "information",
+
+            "fact",
+
+        }
+
+        if key.lower() in bad_keys:
+            return False
         items = _load_long_term()
+
+        # Duplicate check
+        for item in items:
+            if (
+                item.get("key", "").strip().lower() == key.lower()
+                and
+                item.get("value", "").strip().lower() == value.lower()
+            ):
+                return False
+
         items.append({
             "agent": agent,
             "key": key,
             "value": value,
             "timestamp": datetime.now().isoformat()
         })
+
         _save_long_term(items)
+
+        return True
 
     def retrieve_long_term(self, query=None, k=10):
         items = _load_long_term()

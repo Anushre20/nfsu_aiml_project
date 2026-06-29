@@ -26,7 +26,7 @@ Available tools:
 - run_command — Input: shell command
 - delegate — Input: task description for a single sub-agent.
 - batch_delegate — Input: multiple tasks, one per line. Each task runs in its OWN parallel sub-agent. Use this when you have MULTIPLE independent subdirectories or tasks.
-- store_memory — Input: key|value. Stores information in long-term memory for future sessions (e.g., coding habits, common mistakes).
+- store_memory — Input: key|value. The key MUST be a short category or entity name. The value MUST be the complete fact to remember. Never leave either empty.
 - FINISH — Input: final answer
 
 RULES:
@@ -50,6 +50,15 @@ RULES:
 13. Use `batch_delegate` for MULTIPLE independent substantive tasks (runs in parallel). Use `delegate` for a single task.
 14. Each sub-agent has its own isolated memory. All run simultaneously.
 15. Use store_memory to save important user preferences, habits, or mistakes you notice.
+16. Only use store_memory when the user explicitly asks you to remember something, or when you discover an important long-term preference or reusable fact.
+17. Never store temporary conversation details.
+18. Never store duplicate information.
+19. The Action Input MUST always be exactly in the format:
+    key | value
+20. The key must be short (1–5 words).
+21. The value must be a complete sentence describing the fact.
+22. Never use the whole sentence as the key.
+23. Never leave the key or value empty.
 
 OUTPUT EXAMPLE (copy this format exactly):
 Thought: I need to explore the workspace first.
@@ -96,9 +105,45 @@ Action: delegate
 Action Input: Read all .py files in agent/ and explain how the ReAct loop works
 
 For storing memory:
-Thought: I noticed the user prefers 4-space indentation.
+
+Good Example 1:
+
+Thought: The user explicitly asked me to remember a coding preference.
 Action: store_memory
-Action Input: user prefers 4-space indentation
+Action Input: Python indentation | User prefers 2-space indentation in Python.
+
+Good Example 2:
+
+Thought: The user explicitly asked me to remember an important concept.
+Action: store_memory
+Action Input: RSA | RSA is an asymmetric encryption algorithm.
+
+Bad Example (Never do this):
+
+Action Input:
+RSA is an asymmetric encryption algorithm
+
+Bad Example (Never do this):
+
+Action Input:
+RSA |
+
+Bad Example (Never do this):
+
+Action Input:
+| RSA is an asymmetric encryption algorithm
+
+Whenever using store_memory, always output Action Input exactly as:
+
+<Entity or Category> | <Complete fact>
+
+Examples:
+
+Python indentation | User prefers 2-space indentation in Python.
+
+RSA | RSA is an asymmetric encryption algorithm.
+
+User Preference | User prefers dark mode.
 
 Never add extra text before or before the three lines.
 Always use exactly: Thought:  Action:  Action Input:"""
