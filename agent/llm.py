@@ -7,8 +7,11 @@ from dotenv import load_dotenv
 load_dotenv()
 _llm_lock = threading.Lock()
 
+DEFAULT_MODEL = os.getenv("OLLAMA_MODEL", "minimax-m2.5:cloud")
+CRITIC_MODEL = os.getenv("CRITIC_MODEL", DEFAULT_MODEL)
 
-def call_llm(prompt: str, structured: bool = False) -> str:
+
+def call_llm(prompt: str, structured: bool = False, model: str = None) -> str:
     from ollama import Client
 
     client = Client(timeout=300)
@@ -19,10 +22,11 @@ def call_llm(prompt: str, structured: bool = False) -> str:
         "num_ctx": 65536,
     }
 
-    MODEL_NAME = os.getenv("OLLAMA_MODEL", "minimax-m2.5:cloud")
+    model_name = model or DEFAULT_MODEL
+
     def _do_call():
         response = client.chat(
-            model=MODEL_NAME,
+            model=model_name,
             messages=[
                 {'role': 'user', 'content': prompt}
             ],

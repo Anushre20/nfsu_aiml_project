@@ -1,6 +1,7 @@
 from agent.base_agent import BaseAgent
 from agent.tools import run_command
 from agent.memory import Memory
+from agent.llm import CRITIC_MODEL
 
 
 CRITIC_PROMPT = """
@@ -56,4 +57,5 @@ class CriticAgent(BaseAgent):
             system_prompt=CRITIC_PROMPT,
             tools=critic_tools,
             memory=memory,
+            model=CRITIC_MODEL,
         )

@@ -36,7 +36,7 @@ def _save_long_term(items):
 
 class Memory:
 
-    MAX_SHORT_TERM = 100
+    MAX_SHORT_TERM = 500
 
     def __init__(self):
         self.short_term = []
@@ -55,10 +55,19 @@ class Memory:
         )
 
     def add_long_term(self, key, value, agent="System"):
+        if not key or not key.strip():
+            return
         items = _load_long_term()
+        for it in items:
+            if it["key"].strip().lower() == key.strip().lower():
+                it["value"] = value
+                it["timestamp"] = datetime.now().isoformat()
+                it["agent"] = agent
+                _save_long_term(items)
+                return
         items.append({
             "agent": agent,
-            "key": key,
+            "key": key.strip(),
             "value": value,
             "timestamp": datetime.now().isoformat()
         })

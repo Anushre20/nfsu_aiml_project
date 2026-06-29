@@ -98,7 +98,9 @@ Action Input: Read all .py files in agent/ and explain how the ReAct loop works
 For storing memory:
 Thought: I noticed the user prefers 4-space indentation.
 Action: store_memory
-Action Input: user prefers 4-space indentation
+Action Input: indentation_style|4-space indentation
+
+IMPORTANT: store_memory format must be "key|value" with a pipe separator. The key is a short label. The value is what to remember.
 
 Never add extra text before or before the three lines.
 Always use exactly: Thought:  Action:  Action Input:"""

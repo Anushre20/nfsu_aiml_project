@@ -616,6 +616,14 @@
     top: chat.scrollHeight,
     behavior: "smooth"
 });
+      } else if (data.type === 'interrupt') { modified = true;
+        if (stepIndicator) stepIndicator.textContent = 'Agent interrupted';
+        const stepDiv = document.createElement('div');
+        stepDiv.className = 'step';
+        stepDiv.style.cssText = 'border-color:#ef4444;background:rgba(239,68,68,0.08);';
+        stepDiv.innerHTML = `<div class="label" style="color:#ef4444;">Hallucination Interrupted</div><div class="value">${escapeHtml(data.reason)}</div>`;
+        stepsContainer.appendChild(stepDiv);
+        chat.scrollTo({ top: chat.scrollHeight, behavior: 'smooth' });
       } else if (data.type === 'done') {
         if (bubble) {
           const statusEl = bubble.querySelector('.status');

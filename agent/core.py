@@ -36,8 +36,24 @@ def _format_scratchpad(scratchpad):
     return "\n".join(result)
 
 
+_action_history = []
+
+
+def _detect_hallucination(action, action_input, scratchpad):
+    _action_history.append((action, action_input))
+    recent = _action_history[-6:]
+    same_action_input = sum(1 for a, ai in recent if a == action and ai == action_input)
+    if same_action_input >= 3:
+        return f"Agent is repeating the same action ({action}) with the same input. Possible loop."
+    if action == "store_memory":
+        if not action_input or "|" not in action_input:
+            return f"store_memory used without key|value format. Input was: {action_input}"
+    if action not in ("finish", "store_memory", "batch_delegate", "delegate") and action not in TOOLS:
+        return f"Agent used unknown tool '{action}'. Possible hallucination."
+    return None
+
+
 def _agent_step(question, subtasks, scratchpad):
-    short_context = memory.get_short_term_text()
     long_memory = memory.retrieve_long_term(question)
 
     if long_memory:
@@ -51,7 +67,7 @@ def _agent_step(question, subtasks, scratchpad):
     system_prompt = build_system_prompt(subtasks)
     scratchpad = _format_scratchpad(scratchpad)
 
-    prompt = system_prompt + "\n\n" + knowledge_block + "\n\nRecent Conversation:\n" + short_context + "\n\nQuestion:\n" + question + "\n\n" + scratchpad
+    prompt = system_prompt + "\n\n" + knowledge_block + "\n\nQuestion:\n" + question + "\n\n" + scratchpad
 
     llm_output = call_llm(prompt)
 
@@ -66,13 +82,21 @@ def _agent_step(question, subtasks, scratchpad):
         _debug("PARSED=" + str(parsed))
     action = parsed["action"].strip().lower()
 
+    hallucination = _detect_hallucination(action, parsed.get("action_input", ""), scratchpad)
+    if hallucination:
+        return "__interrupt__", parsed, hallucination, None, scratchpad, None
+
     if action == "finish":
         return action, parsed, None, None, scratchpad, None
 
     if action == "store_memory":
-        memory.add_long_term(parsed.get("action_input", ""), parsed.get("action_input_extra", ""))
+        key = parsed.get("action_input", "")
+        value = parsed.get("action_input_extra", "")
+        if not value:
+            value = "true"
+        memory.add_long_term(key, value)
         result = "Information stored in long-term memory."
-        step_entry = f"Thought: {parsed['thought']}\nAction: store_memory\nAction Input: {parsed['action_input']}\nObservation: {result}"
+        step_entry = f"Thought: {parsed['thought']}\nAction: store_memory\nAction Input: {key}\nObservation: {result}"
         return action, parsed, result, step_entry, scratchpad + "\n" + step_entry, None
 
     if action == "batch_delegate":
@@ -120,6 +144,9 @@ def run_agent(question, subtasks=None):
         action, parsed, tool_result, step_entry, scratchpad, flow_type = _agent_step(
             question, subtasks, scratchpad
         )
+
+        if action == "__interrupt__":
+            return {"steps": steps_data, "final_answer": f"Agent interrupted: {tool_result}"}
 
         if action == "finish":
             answer = parsed["action_input"]
@@ -207,6 +234,18 @@ def stream_agent(question, subtasks=None, resume_from=None):
         action, parsed, tool_result, step_entry, scratchpad, flow_type = _agent_step(
             question, subtasks, scratchpad
         )
+
+        if action == "__interrupt__":
+            msg = tool_result
+            _debug(f"[INTERRUPT] {msg}")
+            yield {
+                "type": "interrupt",
+                "step": step_num,
+                "thought": parsed["thought"],
+                "reason": msg,
+            }
+            yield {"type": "done", "final_answer": f"Agent interrupted: {msg}", "steps": steps_data}
+            return
 
         if action == "finish":
             answer = parsed["action_input"]

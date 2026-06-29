@@ -49,7 +49,7 @@ check("list_files in TOOLS", "list_files" in TOOLS)
 check("list_files_recursive in TOOLS", "list_files_recursive" in TOOLS)
 check("read_file_partial in TOOLS", "read_file_partial" in TOOLS)
 check("update_file in TOOLS", "update_file" in TOOLS)
-check("8 tools registered", len(TOOLS) == 8, f"got {len(TOOLS)}")
+check("9 tools registered", len(TOOLS) == 9, f"got {len(TOOLS)}")
 
 # --- memory reset ---
 m = Memory()

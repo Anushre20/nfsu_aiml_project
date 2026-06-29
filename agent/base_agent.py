@@ -9,11 +9,13 @@ class BaseAgent:
             system_prompt,
             tools,
             memory,
+            model=None,
         ):
             self.name = name
             self.system_prompt = system_prompt
             self.tools = tools
             self.memory = memory
+            self.model = model
 
         def build_prompt(
             self,
@@ -61,7 +63,7 @@ class BaseAgent:
                 scratchpad,
             )
 
-            output = call_llm(prompt)
+            output = call_llm(prompt, model=self.model)
 
             parsed = parse_output(output)
 
