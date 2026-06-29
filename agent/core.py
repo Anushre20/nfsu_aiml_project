@@ -1,4 +1,5 @@
 import os
+import threading
 from agent.llm import call_llm
 from agent.parser import parse_output
 from agent.prompts import build_system_prompt
@@ -10,10 +11,12 @@ from agent.sub_agents import run_subagent_stream, run_subagents_parallel
 DEBUG = True
 MAX_STEPS = 200
 SCRATCHPAD_MAX_STEPS = 6
+OBS_MAX_LEN = 2000
 memory = Memory()
+_abort_event = threading.Event()
 
 
-def _truncate_obs(text, max_len=300):
+def _truncate_obs(text, max_len=OBS_MAX_LEN):
     if text and len(text) > max_len:
         return text[:max_len] + f"\n... [truncated {len(text) - max_len} chars]"
     return text
@@ -141,6 +144,9 @@ def run_agent(question, subtasks=None):
     steps_data = []
     scratchpad = ""
     for _ in range(MAX_STEPS):
+        if _abort_event.is_set():
+            return {"steps": steps_data, "final_answer": "Operation aborted by user."}
+
         action, parsed, tool_result, step_entry, scratchpad, flow_type = _agent_step(
             question, subtasks, scratchpad
         )
@@ -231,6 +237,10 @@ def stream_agent(question, subtasks=None, resume_from=None):
         start_step = 0
 
     for step_num in range(start_step, start_step + MAX_STEPS):
+        if _abort_event.is_set():
+            yield {"type": "done", "final_answer": "Operation aborted by user.", "steps": steps_data}
+            return
+
         action, parsed, tool_result, step_entry, scratchpad, flow_type = _agent_step(
             question, subtasks, scratchpad
         )

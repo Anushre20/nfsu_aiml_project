@@ -250,7 +250,7 @@ def run_subagents_parallel(tasks, depth=1, max_steps=_SUBAGENT_MAX_STEPS):
     threads = []
 
     for i, task in enumerate(tasks):
-        t = Thread(target=_run_single_subagent, args=(task, depth, i, len(tasks), queue, max_steps))
+        t = Thread(target=_run_single_subagent, args=(task, depth, i, len(tasks), queue, max_steps), daemon=True)
         t.start()
         threads.append(t)
 

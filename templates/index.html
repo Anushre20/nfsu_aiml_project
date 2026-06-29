@@ -165,6 +165,13 @@
     }
     .input-row button:hover:not(:disabled) { opacity: 0.85; }
     .input-row button:disabled { opacity: 0.35; cursor: not-allowed; }
+    .stop-btn {
+      padding: 11px 20px; border-radius: 12px; border: none;
+      background: #ef4444; color: #fff; font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: opacity 0.15s; white-space: nowrap;
+    }
+    .stop-btn:hover { opacity: 0.85; }
+    .stop-btn.hidden { display: none; }
 
     .status {
       max-width: 780px; margin: 0 auto 8px; font-size: 13px; color: #475569;
@@ -278,6 +285,7 @@
     <div class="input-row">
       <input type="text" id="promptInput" placeholder="Ask something..." autofocus />
       <button id="sendBtn">Send</button>
+      <button id="stopBtn" class="stop-btn hidden">Stop</button>
     </div>
   </div>
 
@@ -296,6 +304,7 @@
     const wsLockMsg = document.getElementById('wsLockMsg');
     const clearBtn = document.getElementById('clearBtn');
     const modalContainer = document.getElementById('modalContainer');
+    const stopBtn = document.getElementById('stopBtn');
     let locked = false;
     let wsValid = true;
 
@@ -416,6 +425,11 @@
     wsSaveBtn.onclick = saveWorkspace;
     wsInput.onkeydown = (e) => { if (e.key === 'Enter') saveWorkspace(); };
     clearBtn.onclick = showClearModal;
+    stopBtn.onclick = function() {
+      fetch('/api/abort', { method: 'POST' }).catch(() => {});
+      if (currentController) { currentController.abort(); currentController = null; }
+      stopBtn.classList.add('hidden');
+    };
 
     function appendMessage(role, html) {
       const div = document.createElement('div');
@@ -436,6 +450,7 @@
         sendBtn.disabled = lockedState;
         sendBtn.textContent = lockedState ? "Thinking..." : "Send"; 
       }
+      stopBtn.classList.toggle('hidden', !lockedState);
       status.classList.toggle('hidden', !lockedState);
     }
 
@@ -532,7 +547,7 @@
           <div class="label" style="margin-top:6px">Action Input</div>
           <div class="value code">${escapeHtml(data.action_input)}</div>
           <div class="label" style="margin-top:6px">Observation</div>
-          <div class="value">${escapeHtml(data.observation && data.observation.length > 200 ? data.observation.substring(0,200)+'...' : data.observation)}</div>
+          <div class="value" style="max-height:300px;overflow-y:auto;white-space:pre-wrap;font-family:monospace;font-size:12px;background:rgba(255,255,255,0.4);padding:6px 8px;border-radius:6px;margin-top:2px;">${escapeHtml(data.observation || '')}</div>
         `;
         stepsContainer.appendChild(stepDiv);
         chat.scrollTo({

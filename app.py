@@ -7,7 +7,7 @@ from flask import Flask, render_template, request, Response, jsonify
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from agent.core import stream_agent, run_agent, memory as agent_memory
+from agent.core import stream_agent, run_agent, memory as agent_memory, _abort_event
 from agent.task_planner import TaskPlanner
 from agent.llm import call_llm
 from agent.tools import get_workspace, set_workspace
@@ -170,6 +170,12 @@ def api_clear_history():
     return jsonify({"status": "cleared"})
 
 
+@app.route("/api/abort", methods=["POST"])
+def api_abort():
+    _abort_event.set()
+    return jsonify({"status": "aborted"})
+
+
 @app.route("/api/chat", methods=["POST"])
 def chat():
     data = request.get_json()
@@ -189,6 +195,7 @@ def chat():
         )
 
     def generate():
+        _abort_event.clear()
         yield f"data: {json.dumps({'type': 'connected'})}\n\n"
 
         try:
@@ -210,7 +217,7 @@ def chat():
                 for event in stream_agent(prompt, subtasks=subtasks):
                     yield f"data: {json.dumps(event)}\n\n"
         except GeneratorExit:
-            pass
+            _abort_event.set()
         except Exception as e:
             yield f"data: {json.dumps({'type': 'done', 'final_answer': f'Server error: {e}', 'steps': []})}\n\n"
 

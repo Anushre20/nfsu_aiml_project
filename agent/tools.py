@@ -76,39 +76,41 @@ def read_file(path):
 def batch_read_files(raw_input):
     """
     Input:
-        one file path per line
+        one file path per line, optionally with |offset|limit for partial reads
 
     Output:
         concatenated contents
     """
 
-    paths = [
+    lines = [
         p.strip()
         for p in raw_input.splitlines()
         if p.strip()
     ]
 
-    if not paths:
+    if not lines:
         return "Error: No file paths provided."
 
-    def _read(path):
-        return path, read_file(path)
+    def _read(line):
+        if "|" in line:
+            return read_file_partial(line)
+        return read_file(line)
 
     with ThreadPoolExecutor(
-            max_workers=min(4, len(paths))
+            max_workers=min(4, len(lines))
     ) as executor:
 
         results = list(
-            executor.map(_read, paths)
+            executor.map(_read, lines)
         )
 
     outputs = []
 
-    for path, result in results:
+    for line, result in zip(lines, results):
 
         outputs.append(
             f"\n{'='*25}\n"
-            f"{path}\n"
+            f"{line}\n"
             f"{'='*25}\n"
             f"{result}"
         )
