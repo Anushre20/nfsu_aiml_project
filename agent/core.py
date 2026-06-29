@@ -67,6 +67,12 @@ def _agent_step(question, subtasks, scratchpad):
     else:
         knowledge_block = ""
 
+    conv_text = memory.get_short_term_text()
+    if conv_text:
+        conv_block = f"\n\nPrevious Conversation:\n{conv_text}"
+    else:
+        conv_block = ""
+
     obs_text = memory.get_observations_text(k=5)
     if obs_text:
         obs_block = f"\n\nPrevious Observations:\n{obs_text}"
@@ -76,7 +82,7 @@ def _agent_step(question, subtasks, scratchpad):
     system_prompt = build_system_prompt(subtasks)
     scratchpad = _format_scratchpad(scratchpad)
 
-    prompt = system_prompt + "\n\n" + knowledge_block + obs_block + "\n\nQuestion:\n" + question + "\n\n" + scratchpad
+    prompt = system_prompt + "\n\n" + knowledge_block + conv_block + obs_block + "\n\nQuestion:\n" + question + "\n\n" + scratchpad
 
     llm_output = call_llm(prompt)
 

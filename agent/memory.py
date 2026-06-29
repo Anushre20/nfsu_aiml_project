@@ -34,26 +34,70 @@ def _save_long_term(items):
         pass
 
 
+_HISTORY_FILE = None
+
+
+def _ensure_history_file():
+    global _HISTORY_FILE
+    if _HISTORY_FILE is None:
+        d = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "agent")
+        _HISTORY_FILE = os.path.join(d, "chat_history.json")
+    return _HISTORY_FILE
+
+
 class Memory:
 
     MAX_SHORT_TERM = 500
     MAX_OBSERVATIONS = 10
 
-    def __init__(self):
+    def __init__(self, load_history=True):
         self.short_term = []
         self._observations = []
+        self._history_loaded = not load_history
+        self._skip_history = not load_history
+
+    def _load_from_history(self):
+        if self._skip_history:
+            return
+        path = _ensure_history_file()
+        if not os.path.exists(path):
+            return
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            sessions = data.get("sessions", [])
+            if not sessions:
+                return
+            last = sessions[-1]
+            for msg in last.get("messages", []):
+                role = msg.get("role", "")
+                text = msg.get("text", "")
+                if role and text:
+                    self.short_term.append({"role": role, "content": text[:500], "timestamp": datetime.now().isoformat()})
+        except Exception:
+            pass
 
     def add_short_term(self, role, content):
+        if not self._history_loaded:
+            self._load_from_history()
+            self._history_loaded = True
         self.short_term.append({"role": role, "content": content, "timestamp": datetime.now().isoformat()})
         if len(self.short_term) > self.MAX_SHORT_TERM:
             self.short_term.pop(0)
 
     def get_short_term(self):
+        if not self._history_loaded:
+            self._load_from_history()
+            self._history_loaded = True
         return self.short_term
 
     def get_short_term_text(self):
+        if not self._history_loaded:
+            self._load_from_history()
+            self._history_loaded = True
+        entries = self.short_term[-10:]
         return "\n".join(
-            [f"{entry['role']}: {entry['content']}" for entry in self.short_term]
+            [f"{entry['role']}: {entry['content']}" for entry in entries]
         )
 
     def add_long_term(self, key, value, agent="System"):
@@ -116,6 +160,7 @@ class Memory:
     def reset_short_term(self):
         self.short_term.clear()
         self._observations.clear()
+        self._history_loaded = self._skip_history
 
     def reset(self):
         self.short_term.clear()

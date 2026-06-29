@@ -52,9 +52,11 @@ check("update_file in TOOLS", "update_file" in TOOLS)
 check("9 tools registered", len(TOOLS) == 9, f"got {len(TOOLS)}")
 
 # --- memory reset ---
-m = Memory()
+m = Memory(load_history=False)
 m.add_short_term("user", "hello")
 assert len(m.get_short_term()) == 1
+m.add_short_term("user", "world")
+assert len(m.get_short_term()) == 2
 m.reset_short_term()
 assert len(m.get_short_term()) == 0
 check("memory.reset_short_term works", True)
