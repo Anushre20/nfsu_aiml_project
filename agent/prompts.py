@@ -31,79 +31,43 @@ Available tools:
 
 RULES:
 1. Only ONE Thought, ONE Action, ONE Action Input per response.
-2. Stop after writing Action Input — never generate Observation.
-3. Files without full path are in the workspace root.
-4. Use absolute paths for files outside workspace.
-5. Use list_files or list_files_recursive before reading files to discover the project structure.
-6. If you need to inspect multiple related files, prefer batch_read_files instead of repeated read_file calls.
-7. After writing a file, verify with read_file or run_command.
-8. Do NOT call FINISH until you've actually done the work.
+2. Stop after writing Action Input — do NOT generate Observation.
+3. Once you have answered the question, ALWAYS call FINISH. Do not explore further.
+4. Use list_files/list_files_recursive before reading files to discover structure.
+5. Prefer batch_read_files over repeated read_file calls for multiple files.
+6. After writing a file, verify with read_file or run_command.
 
-=== DELEGATION RULES (CRITICAL) ===
-9. DO NOT delegate trivial operations like `list_files`, `list_files_recursive`, `read_file` of a single file. Use those tools directly.
-10. Only use `delegate` or `batch_delegate` for SUBSTANTIVE work:
-   - Reading multiple files inside a directory to understand project structure (e.g., "Read all .py files in agent/ and summarize the architecture")
-   - Writing or refactoring code across multiple files
-   - Running long-running CLI commands (builds, tests, linting) in parallel
-11. When exploring, use `list_files` / `list_files_recursive` yourself. Only delegate after you know what files exist and you need deep analysis.
-12. When multiple related files must be inspected together, prefer batch_read_files instead of multiple read_file actions.
-13. Use `batch_delegate` for MULTIPLE independent substantive tasks (runs in parallel). Use `delegate` for a single task.
-14. Each sub-agent has its own isolated memory. All run simultaneously.
-15. Use store_memory to save important user preferences, habits, or mistakes you notice.
+=== DELEGATION RULES ===
+7. Only delegate SUBSTANTIVE work (multi-file analysis, cross-file refactoring, long CLI). Do NOT delegate trivial ops like single list_files/read_file.
+8. batch_delegate for multiple independent tasks (parallel). delegate for single tasks.
+9. Each sub-agent has isolated memory; all run simultaneously.
+10. Use store_memory for important user preferences/habits/mistakes.
 
-OUTPUT EXAMPLE (copy this format exactly):
-Thought: I need to explore the workspace first.
-Action: list_files
-Action Input: .
+=== OUTPUT FORMAT ===
+Always use exactly:
+Thought: ...
+Action: tool_name
+Action Input: ...
 
-Thought:
-I need to inspect multiple related files.
-
-Action:
-batch_read_files
-
-Action Input:
-agent/core.py
-agent/llm.py
-agent/memory.py
-agent/parser.py
-
-Thought: I need to understand the complete agent architecture.
-
+For batch_read_files (multiple files):
+Thought: ...
 Action: batch_read_files
-
 Action Input:
-agent/core.py
-agent/parser.py
-agent/prompts.py
-agent/tools.py
+path/to/file1.py
+path/to/file2.py
 
-Observation:
-(The tool will return all file contents.)
-
-Thought:
-Now I have enough information to analyze the architecture.
-
-For batch delegation (substantive work only):
-Thought: I need to understand the architecture by reading all source files in these directories.
+For batch_delegate (parallel tasks):
+Thought: ...
 Action: batch_delegate
-Action Input: Read all .py files in agent/ and summarize the architecture
-Read all .py files in templates/ and summarize the structure
+Action Input: description of task 1
+description of task 2
 
-For single delegation:
-Thought: I need a deep analysis of the agent directory logic.
-Action: delegate
-Action Input: Read all .py files in agent/ and explain how the ReAct loop works
-
-For storing memory:
-Thought: I noticed the user prefers 4-space indentation.
+For store_memory:
+Thought: ...
 Action: store_memory
-Action Input: indentation_style|4-space indentation
+Action Input: short_key|complete fact to remember
 
-IMPORTANT: store_memory format must be "key|value" with a pipe separator. The key is a short label. The value is what to remember.
-
-Never add extra text before or before the three lines.
-Always use exactly: Thought:  Action:  Action Input:"""
+Never add extra text before or after the three lines."""
 
 
 def build_system_prompt(subtasks=None):

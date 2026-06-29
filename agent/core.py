@@ -11,7 +11,7 @@ from agent.sub_agents import run_subagent_stream, run_subagents_parallel
 DEBUG = True
 MAX_STEPS = 200
 SCRATCHPAD_MAX_STEPS = 6
-OBS_MAX_LEN = 2000
+OBS_MAX_LEN = 500
 memory = Memory()
 _abort_event = threading.Event()
 
@@ -42,9 +42,13 @@ def _format_scratchpad(scratchpad):
 _action_history = []
 
 
+def _reset_action_history():
+    _action_history.clear()
+
+
 def _detect_hallucination(action, action_input, scratchpad):
     _action_history.append((action, action_input))
-    recent = _action_history[-6:]
+    recent = _action_history[-8:]
     same_action_input = sum(1 for a, ai in recent if a == action and ai == action_input)
     if same_action_input >= 3:
         return f"Agent is repeating the same action ({action}) with the same input. Possible loop."
@@ -68,21 +72,12 @@ def _agent_step(question, subtasks, scratchpad):
         knowledge_block = ""
 
     conv_text = memory.get_short_term_text()
-    if conv_text:
-        conv_block = f"\n\nPrevious Conversation:\n{conv_text}"
-    else:
-        conv_block = ""
-
-    obs_text = memory.get_observations_text(k=5)
-    if obs_text:
-        obs_block = f"\n\nPrevious Observations:\n{obs_text}"
-    else:
-        obs_block = ""
+    conv_block = f"\n\nPrevious Conversation:\n{conv_text}" if conv_text else ""
 
     system_prompt = build_system_prompt(subtasks)
     scratchpad = _format_scratchpad(scratchpad)
 
-    prompt = system_prompt + "\n\n" + knowledge_block + conv_block + obs_block + "\n\nQuestion:\n" + question + "\n\n" + scratchpad
+    prompt = system_prompt + "\n\n" + knowledge_block + conv_block + "\n\nQuestion:\n" + question + "\n\n" + scratchpad
 
     llm_output = call_llm(prompt)
 
@@ -142,7 +137,7 @@ def _agent_step(question, subtasks, scratchpad):
     if DEBUG:
         _debug("TOOL RESULT=" + str(tool_result))
 
-    memory.add_observation(action, _truncate_obs(str(tool_result), 400))
+    memory.add_observation(action, _truncate_obs(str(tool_result), 300))
 
     step_entry = f"Thought: {parsed['thought']}\nAction: {action}\nAction Input: {parsed['action_input']}\nObservation: {_truncate_obs(str(tool_result))}"
     if DEBUG:
@@ -153,6 +148,7 @@ def _agent_step(question, subtasks, scratchpad):
 
 
 def run_agent(question, subtasks=None):
+    _reset_action_history()
     memory.add_short_term("user", question)
 
     steps_data = []
@@ -239,6 +235,7 @@ def run_agent(question, subtasks=None):
 
 
 def stream_agent(question, subtasks=None, resume_from=None):
+    _reset_action_history()
     memory.add_short_term("user", question)
 
     if resume_from:

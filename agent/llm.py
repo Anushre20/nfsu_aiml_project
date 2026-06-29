@@ -7,19 +7,19 @@ from dotenv import load_dotenv
 load_dotenv()
 _llm_lock = threading.Lock()
 
-DEFAULT_MODEL = os.getenv("OLLAMA_MODEL", "minimax-m2.5:cloud")
+DEFAULT_MODEL = os.getenv("OLLAMA_MODEL", "qwen3.6")
 CRITIC_MODEL = os.getenv("CRITIC_MODEL", DEFAULT_MODEL)
 
 
 def call_llm(prompt: str, structured: bool = False, model: str = None) -> str:
     from ollama import Client
 
-    client = Client(timeout=300)
+    client = Client(timeout=600)
 
     options = {
-        "num_predict": 8192,
+        "num_predict": 256,
         "temperature": 0.3,
-        "num_ctx": 65536,
+        "num_ctx": 8192,
     }
 
     model_name = model or DEFAULT_MODEL
